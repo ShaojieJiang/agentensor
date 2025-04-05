@@ -1,7 +1,7 @@
 # UV Template
 
-[![CI](https://github.com/AI-Colleagues/uv-template/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/AI-Colleagues/uv-template/actions/workflows/ci.yml?query=branch%3Amain)
-[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/AI-Colleagues/uv-template.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/AI-Colleagues/uv-template)
+[![CI](https://github.com/ShaojieJiang/agentensor/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/ShaojieJiang/agentensor/actions/workflows/ci.yml?query=branch%3Amain)
+[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/ShaojieJiang/agentensor.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/ShaojieJiang/agentensor)
 <!-- [![PyPI](https://img.shields.io/pypi/v/pydantic-ai.svg)](https://pypi.python.org/pypi/pydantic-ai) -->
 
 A modern Python project template with UV package management, pre-commit hooks for code quality, and documentation support via MkDocs.
