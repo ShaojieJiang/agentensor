@@ -7,14 +7,14 @@ from pydantic_ai import Agent
 class TextTensor:
     """A tensor that represents a text."""
 
-    def __init__(
-        self, text: str, agent: Agent | None = None, requires_grad: bool = False
-    ):
+    def __init__(self, text: str, requires_grad: bool = False) -> None:
         """Initialize a TextTensor."""
         self.text = text
         self.requires_grad = requires_grad
         self.text_grad = ""
-        self.agent = agent
+        self.agent = Agent(
+            model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
+        )
         self.parents: list[TextTensor] = []
 
     def backward(self, grad: str = "") -> None:
@@ -36,7 +36,6 @@ class TextTensor:
 
     def calc_grad(self, input_text: str, output_text: str, grad: str) -> str:
         """Calculate the gradient for the TextTensor."""
-        assert self.agent is not None
         return self.agent.run_sync(
             f"Here is the input: \n\n>{input_text}\n\nI got this "
             f"output: \n\n>{output_text}\n\nHere is the feedback: \n\n"

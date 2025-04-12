@@ -1,7 +1,15 @@
 """Module class."""
 
+from dataclasses import dataclass
 from pydantic_graph.nodes import BaseNode, DepsT, NodeRunEndT, StateT
 from agentensor.tensor import TextTensor
+
+
+@dataclass
+class ModuleState:
+    """State of the graph."""
+
+    input: TextTensor
 
 
 class AgentModule(BaseNode[StateT, DepsT, NodeRunEndT]):
