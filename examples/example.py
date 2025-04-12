@@ -48,8 +48,9 @@ class AgentNode(AgentModule[ModuleState, None, TextTensor]):
         result = await agent.run(ctx.state.input.text)
         output = result.data
 
-        output_tensor = TextTensor(output, requires_grad=True)
-        output_tensor.parents.extend([ctx.state.input, self.system_prompt])
+        output_tensor = TextTensor(
+            output, parents=[ctx.state.input, self.system_prompt], requires_grad=True
+        )
 
         return End(output_tensor)
 

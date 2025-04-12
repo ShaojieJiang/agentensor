@@ -7,7 +7,12 @@ from pydantic_ai import Agent
 class TextTensor:
     """A tensor that represents a text."""
 
-    def __init__(self, text: str, requires_grad: bool = False) -> None:
+    def __init__(
+        self,
+        text: str,
+        parents: list[TextTensor] | None = None,
+        requires_grad: bool = False,
+    ) -> None:
         """Initialize a TextTensor."""
         self.text = text
         self.requires_grad = requires_grad
@@ -15,7 +20,7 @@ class TextTensor:
         self.agent = Agent(
             model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
         )
-        self.parents: list[TextTensor] = []
+        self.parents: list[TextTensor] = parents or []
 
     def backward(self, grad: str = "") -> None:
         """Backward pass for the TextTensor.
