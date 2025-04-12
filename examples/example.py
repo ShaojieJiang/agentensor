@@ -22,10 +22,24 @@ logfire.configure(
 
 
 @dataclass
+class FormatJudge(LLMTensorJudge):
+    """Alias for LLMTensorJudge."""
+
+    pass
+
+
+@dataclass
+class ChineseLanguageJudge(LLMTensorJudge):
+    """Alias for LLMTensorJudge."""
+
+    pass
+
+
+@dataclass
 class GraphState:
     """State class of the graph."""
 
-    grad_fn: Callable[[str, str, str], str]
+    grad_agent: Callable[[str, str, str], str]
 
 
 class AgentNode(AgentModule[GraphState, None, TextTensor]):
@@ -51,9 +65,10 @@ class AgentNode(AgentModule[GraphState, None, TextTensor]):
         result = await agent.run(self.user_prompt.text)
         output = result.data
 
-        output_tensor = TextTensor(output, requires_grad=True)
+        output_tensor = TextTensor(
+            output, agent=ctx.state.grad_agent, requires_grad=True
+        )
         output_tensor.parents.extend([self.user_prompt, self.system_prompt])
-        output_tensor.grad_fn = ctx.state.grad_fn
 
         return End(output_tensor)
 
@@ -64,41 +79,9 @@ async def run_graph(x: TextTensor, graph: Graph, state: GraphState) -> TextTenso
     return result.output
 
 
-@dataclass
-class FormatJudge(LLMTensorJudge):
-    """Alias for LLMTensorJudge."""
-
-    pass
-
-
-@dataclass
-class ChineseLanguageJudge(LLMTensorJudge):
-    """Alias for LLMTensorJudge."""
-
-    pass
-
-
 def main() -> None:
     """Main function."""
     # TODO: Define a generic training loop
-    grad_agent = Agent(
-        model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
-    )
-    optim_agent = Agent(
-        model="openai:gpt-4o-mini",
-        system_prompt="Rewrite the system prompt given the feedback.",
-    )
-
-    def grad_fn(input_text: str, output_text: str, grad: str) -> str:
-        return grad_agent.run_sync(
-            f"Here is the input: \n\n>{input_text}\n\nI got this "
-            f"output: \n\n>{output_text}\n\nHere is the feedback: \n\n"
-            f">{grad}\n\nHow should I improve the input to get a "
-            f"better output?"
-        ).data
-
-    def optimize_fn(text: str, grad: str) -> str:
-        return optim_agent.run_sync(f"Feedback: {grad}\nText: {text}").data
 
     dataset = Dataset[TextTensor, TextTensor, Any](
         cases=[
@@ -124,11 +107,19 @@ def main() -> None:
             ),
         ],
     )
+    
+    grad_agent = Agent(
+        model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
+    )
+    optim_agent = Agent(
+        model="openai:gpt-4o-mini",
+        system_prompt="Rewrite the system prompt given the feedback.",
+    )
 
-    state = GraphState(grad_fn=grad_fn)
-    nodes = [AgentNode(TextTensor("Hello, how are you?"))]
+    state = GraphState(grad_agent=grad_agent)
+    nodes = [AgentNode]
     graph = Graph(nodes=nodes)
-    optimizer = Optimizer(nodes, optimize_fn)  # type: ignore[arg-type]
+    optimizer = Optimizer(nodes, optim_agent)  # type: ignore[arg-type]
 
     epochs = 15
     for i in range(epochs):

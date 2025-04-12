@@ -1,24 +1,20 @@
 """Example module."""
 
 from __future__ import annotations
-from collections.abc import Callable
+from pydantic_ai import Agent
 
 
 class TextTensor:
     """A tensor that represents a text."""
 
-    def __init__(self, text: str, requires_grad: bool = False):
-        """Initialize a TextTensor.
-
-        Args:
-            text (str): The text to represent.
-            requires_grad (bool, optional): Whether to require gradients.
-            Defaults to False.
-        """
+    def __init__(
+        self, text: str, agent: Agent | None = None, requires_grad: bool = False
+    ):
+        """Initialize a TextTensor."""
         self.text = text
         self.requires_grad = requires_grad
         self.text_grad = ""
-        self.grad_fn: Callable | None = None
+        self.agent = agent
         self.parents: list[TextTensor] = []
 
     def backward(self, grad: str = "") -> None:
@@ -30,13 +26,23 @@ class TextTensor:
         if not grad:  # No gradient to backpropagate
             return
 
-        self.text_grad = grad
-        if self.grad_fn:
+        if self.requires_grad:
+            self.text_grad = grad
             for parent in self.parents:
                 if not parent.requires_grad:
                     continue
-                grad_to_parent = self.grad_fn(parent.text, self.text, grad)
+                grad_to_parent = self.calc_grad(parent.text, self.text, grad)
                 parent.backward(grad_to_parent)
+
+    def calc_grad(self, input_text: str, output_text: str, grad: str) -> str:
+        """Calculate the gradient for the TextTensor."""
+        assert self.agent is not None
+        return self.agent.run_sync(
+            f"Here is the input: \n\n>{input_text}\n\nI got this "
+            f"output: \n\n>{output_text}\n\nHere is the feedback: \n\n"
+            f">{grad}\n\nHow should I improve the input to get a "
+            f"better output?"
+        ).data
 
     def __str__(self) -> str:
         """Return the text as a string."""
