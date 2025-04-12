@@ -2,9 +2,9 @@
 
 from unittest.mock import MagicMock, patch
 import pytest
+from agentensor.module import AgentModule
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
-from agentensor.module import AgentModule
 
 
 @pytest.fixture
@@ -26,13 +26,14 @@ def mock_agent():
 @pytest.fixture
 def mock_module_class():
     """Create a mock module class for testing."""
+
     class MockModule(AgentModule):
         param1 = TextTensor("initial text 1", requires_grad=True)
         param2 = TextTensor("initial text 2", requires_grad=True)
-        
+
         def __init__(self):
             super().__init__()
-            
+
         def run(self, state):
             pass
 
@@ -51,15 +52,15 @@ def test_optimizer_zero_grad(mock_graph, mock_agent):
     optimizer = Optimizer(mock_graph)
     optimizer.params = [
         TextTensor("text1", requires_grad=True),
-        TextTensor("text2", requires_grad=True)
+        TextTensor("text2", requires_grad=True),
     ]
-    
+
     # Set some gradients
     optimizer.params[0].text_grad = "grad1"
     optimizer.params[1].text_grad = "grad2"
-    
+
     optimizer.zero_grad()
-    
+
     assert optimizer.params[0].text_grad == ""
     assert optimizer.params[1].text_grad == ""
 
@@ -69,18 +70,18 @@ def test_optimizer_step(mock_graph, mock_agent):
     optimizer = Optimizer(mock_graph)
     optimizer.params = [
         TextTensor("text1", requires_grad=True),
-        TextTensor("text2", requires_grad=True)
+        TextTensor("text2", requires_grad=True),
     ]
-    
+
     # Set some gradients
     optimizer.params[0].text_grad = "grad1"
     optimizer.params[1].text_grad = "grad2"
-    
+
     # Mock the agent's response
     mock_agent.run_sync.return_value.data = "optimized text"
-    
+
     optimizer.step()
-    
+
     # Verify the agent was called for each parameter with gradient
     assert mock_agent.run_sync.call_count == 2
     assert optimizer.params[0].text == "optimized text"
@@ -92,12 +93,12 @@ def test_optimizer_step_no_grad(mock_graph, mock_agent):
     optimizer = Optimizer(mock_graph)
     optimizer.params = [
         TextTensor("text1", requires_grad=True),
-        TextTensor("text2", requires_grad=True)
+        TextTensor("text2", requires_grad=True),
     ]
-    
+
     # No gradients set
     optimizer.step()
-    
+
     # Verify the agent was not called
     assert mock_agent.run_sync.call_count == 0
     assert optimizer.params[0].text == "text1"
@@ -108,19 +109,19 @@ def test_optimizer_with_module(mock_graph, mock_agent, mock_module_class):
     """Test optimizer with a real module."""
     # Set up the graph to return our mock module class
     mock_graph.get_nodes.return_value = [mock_module_class]
-    
+
     optimizer = Optimizer(mock_graph)
-    
+
     # Verify parameters were collected correctly
     assert len(optimizer.params) == 2
     assert optimizer.params[0].text == "initial text 1"
     assert optimizer.params[1].text == "initial text 2"
-    
+
     # Test optimization
     optimizer.params[0].text_grad = "grad1"
     mock_agent.run_sync.return_value.data = "optimized text"
-    
+
     optimizer.step()
-    
+
     assert optimizer.params[0].text == "optimized text"
-    assert optimizer.params[1].text == "initial text 2"  # No gradient, so unchanged 
+    assert optimizer.params[1].text == "initial text 2"  # No gradient, so unchanged

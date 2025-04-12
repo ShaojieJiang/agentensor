@@ -20,7 +20,7 @@ class AgentModule(BaseNode[StateT, DepsT, NodeRunEndT]):
         """Get the parameters of the module."""
         params = []
         for base in cls.__mro__:
-            for attr_name, attr in base.__dict__.items():
+            for _, attr in base.__dict__.items():
                 if isinstance(attr, TextTensor) and attr.requires_grad:
                     params.append(attr)
         return params
