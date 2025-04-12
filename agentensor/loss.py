@@ -36,7 +36,7 @@ class LLMTensorJudge(Evaluator[TextTensor, TextTensor, Any]):
             value=grading_output.pass_, reason=grading_output.reason
         )
 
-    def build_serialization_arguments(self):
+    def build_serialization_arguments(self) -> dict[str, Any]:
         """Build serialization arguments."""
         result = super().build_serialization_arguments()
         if (model := result.get("model")) and isinstance(model, models.Model):

@@ -1,6 +1,6 @@
 """Optimizer module."""
 
-from typing import Callable
+from collections.abc import Callable
 from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
 
@@ -11,11 +11,7 @@ class Optimizer:
     def __init__(
         self, nodes: list[type[AgentModule]], optimize_fn: Callable[[str, str], str]
     ):
-        """Initialize the optimizer.
-
-        Args:
-            nodes (list[AgentModule]): The nodes to optimize.
-        """
+        """Initialize the optimizer."""
         self.params: list[TextTensor] = [
             param for node in nodes for param in node.get_params()
         ]

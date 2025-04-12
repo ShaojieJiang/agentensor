@@ -1,8 +1,9 @@
 """Example usage of agentensor."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Callable
+from typing import Any
 import logfire
 from pydantic_ai import Agent
 from pydantic_evals import Case, Dataset
