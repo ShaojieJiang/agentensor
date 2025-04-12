@@ -83,9 +83,9 @@ def main() -> None:
         ],
     )
 
-    graph = Graph[ModuleState, None, TextTensor](nodes=[AgentNode])
+    graph = Graph(nodes=[AgentNode])
     optimizer = Optimizer(graph)  # type: ignore[arg-type]
-    trainer = Trainer(graph, ModuleState, AgentNode, dataset, optimizer, 15)
+    trainer = Trainer(graph, AgentNode, dataset, optimizer, 15)  # type: ignore[arg-type]
     trainer.train()
 
 
