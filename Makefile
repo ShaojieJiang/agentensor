@@ -1,6 +1,6 @@
 lint:
 	ruff check .
-	mypy uv_template
+	mypy agentensor examples
 	ruff format . --check
 
 format:

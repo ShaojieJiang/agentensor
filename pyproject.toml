@@ -25,12 +25,18 @@ docs = [
 ]
 
 [project]
-dependencies = []
+dependencies = [
+    "logfire>=3.14.0",
+    "pydantic-ai>=0.0.55",
+]
 description = "Add your description here"
-name = "uv-template"
+license = {file = "LICENSE"}
+name = "agentensor"
 readme = "README.md"
 requires-python = ">=3.12"
 version = "0.0.1"
+url = "https://github.com/ShaojieJiang/agentensor"
+
 
 [tool.coverage.report]
 exclude_lines = [
@@ -43,7 +49,7 @@ exclude_lines = [
 [tool.coverage.run]
 branch = true
 command_line = "-m pytest"
-source = ["uv_template"]
+source = ["agentensor"]
 
 [tool.mypy]
 disallow_untyped_defs = true
@@ -84,8 +90,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-force-single-line = true
-known-first-party = ["uv_template"]
+known-first-party = ["agentensor"]
 lines-after-imports = 2
 no-lines-before = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
