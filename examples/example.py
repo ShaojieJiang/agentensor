@@ -120,6 +120,7 @@ class ChineseLanguageJudge(LLMTensorJudge):
 
 def main() -> None:
     """Main function."""
+    # TODO: Define a generic training loop
     grad_agent = Agent(
         model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
     )

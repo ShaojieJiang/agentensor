@@ -27,6 +27,7 @@ class Optimizer:
         for param in self.params:
             if not param.text_grad:
                 continue
+            # TODO: make optimize function a parameter
             rewritten = self.agent.run_sync(
                 f"Feedback: {param.text_grad}\nText: {param.text}"
             )
