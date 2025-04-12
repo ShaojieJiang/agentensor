@@ -1,8 +1,8 @@
 """Example usage of agentensor."""
 
+import os
 from dataclasses import dataclass
 from typing import Any
-import logfire
 from pydantic_ai import Agent
 from pydantic_evals import Case, Dataset
 from pydantic_graph import End, Graph, GraphRunContext
@@ -11,13 +11,6 @@ from agentensor.module import AgentModule, ModuleState
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
 from agentensor.train import Trainer
-
-
-logfire.configure(
-    send_to_logfire="if-token-present",
-    environment="development",
-    service_name="evals",
-)
 
 
 @dataclass
@@ -57,7 +50,14 @@ class AgentNode(AgentModule[ModuleState, None, TextTensor]):
 
 def main() -> None:
     """Main function."""
-    # TODO: Define a generic training loop
+    if os.environ.get("LOGFIRE_TOKEN", None):
+        import logfire
+
+        logfire.configure(
+            send_to_logfire="if-token-present",
+            environment="development",
+            service_name="evals",
+        )
 
     dataset = Dataset[TextTensor, TextTensor, Any](
         cases=[
