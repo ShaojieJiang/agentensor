@@ -57,7 +57,7 @@ class Trainer:
 
             print(f"Epoch {i + 1}")
             for param in self.optimizer.params:
-                print(param.text)
+                print(param.text)  # pragma: no cover
             print()
             performance = report.averages().assertions
             assert performance is not None
