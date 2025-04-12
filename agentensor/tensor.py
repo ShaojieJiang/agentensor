@@ -35,13 +35,7 @@ class TextTensor:
             for parent in self.parents:
                 if not parent.requires_grad:
                     continue
-                # TODO: make grad_fn a parameter
-                grad_to_parent = self.grad_fn(
-                    f"Here is the input: \n\n>{parent.text}\n\nI got this "
-                    f"output: \n\n>{self.text}\n\nHere is the feedback: \n\n"
-                    f">{grad}\n\nHow should I improve the input to get a "
-                    f"better output?"
-                ).data
+                grad_to_parent = self.grad_fn(parent.text, self.text, grad)
                 parent.backward(grad_to_parent)
 
     def __str__(self) -> str:

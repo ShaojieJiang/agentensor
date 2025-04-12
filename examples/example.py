@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Any
+from typing import Any, Callable
 import logfire
 from pydantic_ai import Agent
 from pydantic_evals import Case, Dataset
@@ -24,7 +24,7 @@ logfire.configure(
 class GraphState:
     """State class of the graph."""
 
-    grad_agent: Agent
+    grad_fn: Callable[[str, str, str], str]
 
 
 class AgentNode(AgentModule[GraphState, None, TextTensor]):
@@ -52,7 +52,7 @@ class AgentNode(AgentModule[GraphState, None, TextTensor]):
 
         output_tensor = TextTensor(output, requires_grad=True)
         output_tensor.parents.extend([self.user_prompt, self.system_prompt])
-        output_tensor.grad_fn = ctx.state.grad_agent.run_sync
+        output_tensor.grad_fn = ctx.state.grad_fn
 
         return End(output_tensor)
 
@@ -83,6 +83,21 @@ def main() -> None:
     grad_agent = Agent(
         model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
     )
+    optim_agent = Agent(
+        model="openai:gpt-4o-mini",
+        system_prompt="Rewrite the system prompt given the feedback.",
+    )
+
+    def grad_fn(input_text: str, output_text: str, grad: str) -> str:
+        return grad_agent.run_sync(
+            f"Here is the input: \n\n>{input_text}\n\nI got this "
+            f"output: \n\n>{output_text}\n\nHere is the feedback: \n\n"
+            f">{grad}\n\nHow should I improve the input to get a "
+            f"better output?"
+        ).data
+
+    def optimize_fn(text: str, grad: str) -> str:
+        return optim_agent.run_sync(f"Feedback: {grad}\nText: {text}").data
 
     dataset = Dataset[TextTensor, TextTensor, Any](
         cases=[
@@ -109,10 +124,10 @@ def main() -> None:
         ],
     )
 
-    state = GraphState(grad_agent=grad_agent)
+    state = GraphState(grad_fn=grad_fn)
     nodes = [AgentNode(TextTensor("Hello, how are you?"))]
     graph = Graph(nodes=nodes)
-    optimizer = Optimizer(nodes)  # type: ignore[arg-type]
+    optimizer = Optimizer(nodes, optimize_fn)  # type: ignore[arg-type]
 
     epochs = 15
     for i in range(epochs):
