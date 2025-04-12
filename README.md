@@ -6,6 +6,4 @@
 
 ## TODO
 
-- [ ] Add tests
-- [ ] Add documentation
 - [ ] Add parameter saving
