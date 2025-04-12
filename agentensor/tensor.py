@@ -27,6 +27,9 @@ class TextTensor:
         Args:
             grad (str, optional): The gradient to backpropagate. Defaults to "".
         """
+        if not grad:  # No gradient to backpropagate
+            return
+
         self.text_grad = grad
         if self.grad_fn:
             for parent in self.parents:

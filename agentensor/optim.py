@@ -19,12 +19,14 @@ class Optimizer:
         ]
         self.agent = Agent(
             model="openai:gpt-4o-mini",
-            system_prompt="Rewrite the text given the feedback.",
+            system_prompt="Rewrite the system prompt given the feedback.",
         )
 
     def step(self) -> None:
         """Step the optimizer."""
         for param in self.params:
+            if not param.text_grad:
+                continue
             rewritten = self.agent.run_sync(
                 f"Feedback: {param.text_grad}\nText: {param.text}"
             )
