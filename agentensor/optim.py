@@ -1,6 +1,6 @@
 """Optimizer module."""
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, models
 from pydantic_graph import Graph
 from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
@@ -9,7 +9,11 @@ from agentensor.tensor import TextTensor
 class Optimizer:
     """Optimizer class."""
 
-    def __init__(self, graph: Graph) -> None:
+    def __init__(
+        self,
+        graph: Graph,
+        model: models.Model | models.KnownModelName | str | None = None,
+    ) -> None:
         """Initialize the optimizer."""
         self.params: list[TextTensor] = [
             param
@@ -18,7 +22,7 @@ class Optimizer:
             if issubclass(node, AgentModule)
         ]
         self.agent: Agent = Agent(
-            model="openai:gpt-4o-mini",
+            model=model or "openai:gpt-4o-mini",
             system_prompt="Rewrite the system prompt given the feedback.",
         )
 

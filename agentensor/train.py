@@ -73,16 +73,21 @@ class Trainer:
                 break
 
     def evaluate(
-        self, data_split: Literal["train", "eval", "test"] = "eval"
+        self,
+        data_split: Literal["train", "eval", "test"] = "eval",
+        limit_cases: int | None = None,
     ) -> EvaluationReport:
         """Evaluate the graph."""
         dataset = getattr(self, f"{data_split}_dataset")
         assert dataset, f"{data_split} dataset is required"
+        if limit_cases:
+            limited_cases = dataset.cases[:limit_cases]
+            dataset = Dataset(cases=limited_cases, evaluators=dataset.evaluators)
         report = dataset.evaluate_sync(self.forward)
 
         return report
 
-    def test(self) -> None:
+    def test(self, limit_cases: int | None = None) -> None:
         """Test the graph."""
-        report = self.evaluate("test")
+        report = self.evaluate("test", limit_cases=limit_cases)
         report.print(include_input=True, include_output=True, include_durations=True)

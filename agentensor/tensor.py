@@ -1,7 +1,7 @@
 """Example module."""
 
 from __future__ import annotations
-from pydantic_ai import Agent
+from pydantic_ai import Agent, models
 
 
 class TextTensor:
@@ -12,13 +12,15 @@ class TextTensor:
         text: str,
         parents: list[TextTensor] | None = None,
         requires_grad: bool = False,
+        model: models.Model | models.KnownModelName | str | None = None,
     ) -> None:
         """Initialize a TextTensor."""
         self.text = text
         self.requires_grad = requires_grad
         self.text_grad = ""
         self.agent = Agent(
-            model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
+            model=model or "openai:gpt-4o-mini",
+            system_prompt="Answer the user's question.",
         )
         self.parents: list[TextTensor] = parents or []
 
