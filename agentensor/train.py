@@ -1,7 +1,8 @@
 """Trainer."""
 
-from typing import Any
+from typing import Any, Literal
 from pydantic_evals import Dataset
+from pydantic_evals.reporting import EvaluationReport
 from pydantic_graph import Graph
 from agentensor.module import AgentModule, ModuleState
 from agentensor.optim import Optimizer
@@ -15,29 +16,35 @@ class Trainer:
         self,
         graph: Graph[ModuleState, None, TextTensor],
         start_node: type[AgentModule],
-        dataset: Dataset[TextTensor, TextTensor, Any],
-        optimizer: Optimizer,
-        epochs: int,
+        train_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
+        eval_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
+        test_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
+        optimizer: Optimizer | None = None,
+        epochs: int = 10,
         stop_threshold: float = 0.95,
     ):
         """Initialize the trainer."""
         self.graph = graph
         self.start_node = start_node
-        self.dataset = dataset
         self.optimizer = optimizer
         self.epochs = epochs
         self.stop_threshold = stop_threshold
+        self.train_dataset = train_dataset
+        self.eval_dataset = eval_dataset
+        self.test_dataset = test_dataset
 
-    async def step(self, x: TextTensor) -> TextTensor:
-        """Step the optimizer."""
+    async def forward(self, x: TextTensor) -> TextTensor:
+        """Forward the graph."""
         state = ModuleState(input=x)
         result = await self.graph.run(self.start_node(), state=state)  # type: ignore[arg-type]
         return result.output
 
     def train(self) -> None:
-        """Train the model."""
+        """Train the graph."""
+        assert self.train_dataset, "Train dataset is required"
+        assert self.optimizer, "Optimizer is required"
         for i in range(self.epochs):
-            report = self.dataset.evaluate_sync(self.step)
+            report = self.evaluate("train")
             report.print(
                 include_input=True, include_output=True, include_durations=True
             )
@@ -64,3 +71,18 @@ class Trainer:
             if performance >= self.stop_threshold:
                 print("Optimization complete.")
                 break
+
+    def evaluate(
+        self, data_split: Literal["train", "eval", "test"] = "eval"
+    ) -> EvaluationReport:
+        """Evaluate the graph."""
+        dataset = getattr(self, f"{data_split}_dataset")
+        assert dataset, f"{data_split} dataset is required"
+        report = dataset.evaluate_sync(self.forward)
+
+        return report
+
+    def test(self) -> None:
+        """Test the graph."""
+        report = self.evaluate("test")
+        report.print(include_input=True, include_output=True, include_durations=True)

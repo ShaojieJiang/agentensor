@@ -26,6 +26,7 @@ docs = [
 
 [project]
 dependencies = [
+    "datasets>=3.5.0",
     "logfire>=3.14.0",
     "pydantic-ai>=0.0.55",
 ]

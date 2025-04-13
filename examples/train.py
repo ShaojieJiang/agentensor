@@ -82,7 +82,13 @@ def main() -> None:
 
     graph = Graph(nodes=[AgentNode])
     optimizer = Optimizer(graph)  # type: ignore[arg-type]
-    trainer = Trainer(graph, AgentNode, dataset, optimizer, 15)  # type: ignore[arg-type]
+    trainer = Trainer(
+        graph,
+        AgentNode,  # type: ignore[arg-type]
+        train_dataset=dataset,
+        optimizer=optimizer,
+        epochs=15,
+    )
     trainer.train()
 
 

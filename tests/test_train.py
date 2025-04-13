@@ -54,7 +54,7 @@ async def test_trainer_initialization(
     trainer = Trainer(
         graph=mock_graph,
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
         stop_threshold=0.95,
@@ -62,7 +62,7 @@ async def test_trainer_initialization(
 
     assert trainer.graph == mock_graph
     assert trainer.start_node == mock_module_class
-    assert trainer.dataset == mock_dataset
+    assert trainer.train_dataset == mock_dataset
     assert trainer.optimizer == mock_optimizer
     assert trainer.epochs == 10
     assert trainer.stop_threshold == 0.95
@@ -77,7 +77,7 @@ async def test_trainer_step(
     trainer = Trainer(
         graph=mock_graph,
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
     )
@@ -90,7 +90,7 @@ async def test_trainer_step(
 
     # Test step
     input_tensor = TextTensor("test input")
-    result = await trainer.step(input_tensor)
+    result = await trainer.forward(input_tensor)
 
     # Verify
     assert isinstance(result, TextTensor)
@@ -104,7 +104,7 @@ def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_cla
     trainer = Trainer(
         graph=mock_graph,
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
     )
@@ -132,7 +132,7 @@ def test_trainer_train_with_failed_cases(
     trainer = Trainer(
         graph=mock_graph,
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
     )
@@ -169,7 +169,7 @@ def test_trainer_early_stopping(
     trainer = Trainer(
         graph=mock_graph,
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
         stop_threshold=0.95,
@@ -198,7 +198,7 @@ def test_trainer_train_with_no_losses(
     trainer = Trainer(
         graph=mock_graph,
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
     )
