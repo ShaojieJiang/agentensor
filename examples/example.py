@@ -3,7 +3,7 @@
 import os
 from dataclasses import dataclass
 from typing import Any
-from pydantic_ai import Agent
+from pydantic_ai import Agent, models
 from pydantic_evals import Case, Dataset
 from pydantic_graph import End, Graph, GraphRunContext
 from agentensor.loss import LLMTensorJudge
@@ -14,17 +14,21 @@ from agentensor.train import Trainer
 
 
 @dataclass
-class FormatJudge(LLMTensorJudge):
-    """Alias for LLMTensorJudge."""
+class ChineseLanguageJudge(LLMTensorJudge):
+    """Chinese language judge."""
 
-    pass
+    rubric: str = "The output should be in Chinese."
+    model: models.KnownModelName = "openai:gpt-4o-mini"
+    include_input = True
 
 
 @dataclass
-class ChineseLanguageJudge(LLMTensorJudge):
-    """Alias for LLMTensorJudge."""
+class FormatJudge(LLMTensorJudge):
+    """Format judge."""
 
-    pass
+    rubric: str = "The output should start by introducing itself."
+    model: models.KnownModelName = "openai:gpt-4o-mini"
+    include_input = True
 
 
 class AgentNode(AgentModule[ModuleState, None, TextTensor]):
@@ -71,16 +75,8 @@ def main() -> None:
             ),
         ],
         evaluators=[
-            ChineseLanguageJudge(
-                rubric="The output should be in Chinese.",
-                model="openai:gpt-4o-mini",
-                include_input=True,
-            ),
-            FormatJudge(
-                rubric="The output should start by introducing itself.",
-                model="openai:gpt-4o-mini",
-                include_input=True,
-            ),
+            ChineseLanguageJudge(),
+            FormatJudge(),
         ],
     )
 
