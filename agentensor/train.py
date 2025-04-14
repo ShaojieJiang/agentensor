@@ -1,7 +1,6 @@
 """Trainer."""
 
 from typing import Any, Literal
-from pydantic_ai import models
 from pydantic_evals import Dataset
 from pydantic_evals.reporting import EvaluationReport
 from pydantic_graph import Graph
@@ -16,6 +15,7 @@ class Trainer:
     def __init__(
         self,
         graph: Graph[ModuleState, None, TextTensor],
+        graph_state: ModuleState,
         start_node: type[AgentModule],
         train_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
         eval_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
@@ -26,6 +26,7 @@ class Trainer:
     ):
         """Initialize the trainer."""
         self.graph = graph
+        self.graph_state = graph_state
         self.start_node = start_node
         self.optimizer = optimizer
         self.epochs = epochs
@@ -36,8 +37,8 @@ class Trainer:
 
     async def forward(self, x: TextTensor) -> TextTensor:
         """Forward the graph."""
-        state = ModuleState(input=x)
-        result = await self.graph.run(self.start_node(), state=state)  # type: ignore[arg-type]
+        self.graph_state.input = x
+        result = await self.graph.run(self.start_node(), state=self.graph_state)  # type: ignore[arg-type]
         return result.output
 
     def train(self) -> None:

@@ -1,5 +1,6 @@
 """Example usage of agentensor."""
 
+from __future__ import annotations
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -34,22 +35,29 @@ class FormatJudge(LLMTensorJudge):
 class AgentNode(AgentModule[ModuleState, None, TextTensor]):
     """Agent node."""
 
-    system_prompt = TextTensor("You are a helpful assistant.", requires_grad=True)
-
     async def run(self, ctx: GraphRunContext[ModuleState, None]) -> End[TextTensor]:  # type: ignore[override]
         """Run the agent node."""
         agent = Agent(
             model="openai:gpt-4o-mini",
-            system_prompt=self.system_prompt.text,
+            system_prompt=ctx.state.agent_prompt.text,
         )
         result = await agent.run(ctx.state.input.text)
         output = result.data
 
         output_tensor = TextTensor(
-            output, parents=[ctx.state.input, self.system_prompt], requires_grad=True
+            output,
+            parents=[ctx.state.input, ctx.state.agent_prompt],
+            requires_grad=True,
         )
 
         return End(output_tensor)
+
+
+@dataclass
+class TrainState(ModuleState):
+    """State of the graph."""
+
+    agent_prompt: TextTensor | None = None
 
 
 def main() -> None:
@@ -80,10 +88,14 @@ def main() -> None:
         ],
     )
 
+    state = TrainState(
+        agent_prompt=TextTensor("You are a helpful assistant.", requires_grad=True)
+    )
     graph = Graph(nodes=[AgentNode])
-    optimizer = Optimizer(graph)  # type: ignore[arg-type]
+    optimizer = Optimizer(state)  # type: ignore[arg-type]
     trainer = Trainer(
         graph,
+        state,
         AgentNode,  # type: ignore[arg-type]
         train_dataset=dataset,
         optimizer=optimizer,
