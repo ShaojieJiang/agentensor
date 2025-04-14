@@ -1,6 +1,7 @@
 """Trainer."""
 
 from typing import Any, Literal
+from pydantic_ai import models
 from pydantic_evals import Dataset
 from pydantic_evals.reporting import EvaluationReport
 from pydantic_graph import Graph

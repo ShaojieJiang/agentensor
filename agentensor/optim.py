@@ -36,7 +36,7 @@ class Optimizer:
     def zero_grad(self) -> None:
         """Zero the gradients."""
         for param in self.params:
-            param.text_grad = ""
+            param.zero_grad()
 
     def optimize(self, text: str, grad: str) -> str:
         """Optimize the text."""
