@@ -20,9 +20,16 @@ class UnstoppableGibberish(Evaluator[str, bool]):
 
     threshold: float = 10.0
 
-    async def evaluate(self, ctx: EvaluatorContext[str, str]) -> bool:
+    async def evaluate(self, ctx: EvaluatorContext[str, bool]) -> bool:
         """Evaluate the time taken to generate the output."""
         return ctx.duration <= self.threshold  # pragma: no cover
+
+
+@dataclass
+class EvaluateState(ModuleState):
+    """State of the graph."""
+
+    agent_prompt: TextTensor = TextTensor(text="")
 
 
 class HFMultiClassClassificationTask:
@@ -31,7 +38,7 @@ class HFMultiClassClassificationTask:
     def __init__(
         self,
         task_repo: str,
-        evaluators: list[Evaluator[str, bool]],
+        evaluators: list[Evaluator],
         model: models.Model | models.KnownModelName | str | None = None,
     ) -> None:
         """Initialize the multi-class classification task."""
@@ -60,10 +67,10 @@ class HFMultiClassClassificationTask:
         return dataset
 
 
-class AgentNode(AgentModule[ModuleState, None, TextTensor]):
+class AgentNode(AgentModule[EvaluateState, None, TextTensor]):
     """Agent node."""
 
-    async def run(self, ctx: GraphRunContext[ModuleState, None]) -> End[TextTensor]:  # type: ignore[override]
+    async def run(self, ctx: GraphRunContext[EvaluateState, None]) -> End[TextTensor]:  # type: ignore[override]
         """Run the agent node."""
         agent = Agent(
             model=model,
@@ -79,13 +86,6 @@ class AgentNode(AgentModule[ModuleState, None, TextTensor]):
         )
 
         return End(output_tensor)
-
-
-@dataclass
-class EvaluateState(ModuleState):
-    """State of the graph."""
-
-    agent_prompt: TextTensor = TextTensor(text="")
 
 
 if __name__ == "__main__":
@@ -115,4 +115,3 @@ if __name__ == "__main__":
         test_dataset=task.dataset["test"],
     )
     trainer.test(limit_cases=10)
-    print(len(trainer.test_dataset.cases))
