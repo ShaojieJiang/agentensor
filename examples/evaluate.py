@@ -1,8 +1,9 @@
 """Tasks."""
 
+from __future__ import annotations
 from dataclasses import dataclass
 from datasets import load_dataset
-from pydantic_ai import Agent
+from pydantic_ai import Agent, models
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
@@ -24,19 +25,19 @@ class UnstoppableGibberish(Evaluator[str, bool]):
         return ctx.duration <= self.threshold  # pragma: no cover
 
 
-model = OpenAIModel(
-    model_name="llama3.2:1b",
-    provider=OpenAIProvider(base_url="http://localhost:11434/v1", api_key="ollama"),
-)
-
-
 class HFMultiClassClassificationTask:
     """Multi-class classification task from Hugging Face."""
 
-    def __init__(self, task_repo: str, evaluators: list[Evaluator[str, bool]]) -> None:
+    def __init__(
+        self,
+        task_repo: str,
+        evaluators: list[Evaluator[str, bool]],
+        model: models.Model | models.KnownModelName | str | None = None,
+    ) -> None:
         """Initialize the multi-class classification task."""
         self.task_repo = task_repo
         self.evaluators = evaluators
+        self.model = model
         self.dataset = self._prepare_dataset()
 
     def _prepare_dataset(self) -> dict[str, Dataset]:
@@ -50,7 +51,7 @@ class HFMultiClassClassificationTask:
                     Case(
                         inputs=TextTensor(
                             f"Title: {example['title']}\nContent: {example['content']}",
-                            model=model,
+                            model=self.model,
                         ),
                         expected_output=example["all_labels"],
                     )
@@ -62,36 +63,53 @@ class HFMultiClassClassificationTask:
 class AgentNode(AgentModule[ModuleState, None, TextTensor]):
     """Agent node."""
 
-    system_prompt = TextTensor(
-        "You are a helpful assistant.",
-        requires_grad=True,
-        model=model,
-    )
-
     async def run(self, ctx: GraphRunContext[ModuleState, None]) -> End[TextTensor]:  # type: ignore[override]
         """Run the agent node."""
         agent = Agent(
             model=model,
-            system_prompt=self.system_prompt.text,
+            system_prompt=ctx.state.agent_prompt.text,
         )
         result = await agent.run(ctx.state.input.text)
         output = result.data
 
         output_tensor = TextTensor(
-            output, parents=[ctx.state.input, self.system_prompt], requires_grad=True
+            output,
+            parents=[ctx.state.input, ctx.state.agent_prompt],
+            requires_grad=True,
         )
 
         return End(output_tensor)
 
 
+@dataclass
+class EvaluateState(ModuleState):
+    """State of the graph."""
+
+    agent_prompt: TextTensor | None = None
+
+
 if __name__ == "__main__":
+    model = OpenAIModel(
+        model_name="llama3.2:1b",
+        provider=OpenAIProvider(base_url="http://localhost:11434/v1", api_key="ollama"),
+    )
+
     task = HFMultiClassClassificationTask(
         task_repo="knowledgator/events_classification_biotech",
         evaluators=[UnstoppableGibberish()],
+        model=model,
+    )
+    state = EvaluateState(
+        agent_prompt=TextTensor(
+            "You are a helpful assistant.",
+            requires_grad=True,
+            model=model,
+        )
     )
     graph = Graph(nodes=[AgentNode])
     trainer = Trainer(
         graph,
+        state,
         AgentNode,  # type: ignore[arg-type]
         train_dataset=task.dataset["train"],
         test_dataset=task.dataset["test"],
