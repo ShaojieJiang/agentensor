@@ -9,7 +9,7 @@ from agentensor.tensor import TextTensor
 class ModuleState:
     """State of the graph."""
 
-    input: TextTensor | None = None
+    input: TextTensor = TextTensor(text="")
 
 
 class AgentModule(BaseNode[StateT, DepsT, NodeRunEndT]):

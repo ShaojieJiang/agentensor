@@ -17,7 +17,7 @@ class TextTensor:
         """Initialize a TextTensor."""
         self.text = text
         self.requires_grad = requires_grad
-        self.gradients = []
+        self.gradients: list[str] = []
         self.agent = Agent(
             model=model or "openai:gpt-4o-mini",
             system_prompt="Answer the user's question.",

@@ -85,7 +85,7 @@ class AgentNode(AgentModule[ModuleState, None, TextTensor]):
 class EvaluateState(ModuleState):
     """State of the graph."""
 
-    agent_prompt: TextTensor | None = None
+    agent_prompt: TextTensor = TextTensor(text="")
 
 
 if __name__ == "__main__":

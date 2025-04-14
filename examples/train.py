@@ -32,10 +32,17 @@ class FormatJudge(LLMTensorJudge):
     include_input = True
 
 
-class AgentNode(AgentModule[ModuleState, None, TextTensor]):
+@dataclass
+class TrainState(ModuleState):
+    """State of the graph."""
+
+    agent_prompt: TextTensor = TextTensor(text="")
+
+
+class AgentNode(AgentModule[TrainState, None, TextTensor]):
     """Agent node."""
 
-    async def run(self, ctx: GraphRunContext[ModuleState, None]) -> End[TextTensor]:  # type: ignore[override]
+    async def run(self, ctx: GraphRunContext[TrainState, None]) -> End[TextTensor]:  # type: ignore[override]
         """Run the agent node."""
         agent = Agent(
             model="openai:gpt-4o-mini",
@@ -51,13 +58,6 @@ class AgentNode(AgentModule[ModuleState, None, TextTensor]):
         )
 
         return End(output_tensor)
-
-
-@dataclass
-class TrainState(ModuleState):
-    """State of the graph."""
-
-    agent_prompt: TextTensor | None = None
 
 
 def main() -> None:
@@ -91,7 +91,7 @@ def main() -> None:
     state = TrainState(
         agent_prompt=TextTensor("You are a helpful assistant.", requires_grad=True)
     )
-    graph = Graph(nodes=[AgentNode])
+    graph = Graph[TrainState, None, TextTensor](nodes=[AgentNode])
     optimizer = Optimizer(state)  # type: ignore[arg-type]
     trainer = Trainer(
         graph,

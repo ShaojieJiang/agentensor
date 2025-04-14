@@ -4,6 +4,7 @@ from typing import Any, Literal
 from pydantic_evals import Dataset
 from pydantic_evals.reporting import EvaluationReport
 from pydantic_graph import Graph
+from pydantic_graph.nodes import DepsT, StateT
 from agentensor.module import AgentModule, ModuleState
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
@@ -14,7 +15,7 @@ class Trainer:
 
     def __init__(
         self,
-        graph: Graph[ModuleState, None, TextTensor],
+        graph: Graph[StateT, DepsT, TextTensor],
         graph_state: ModuleState,
         start_node: type[AgentModule],
         train_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
