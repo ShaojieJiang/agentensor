@@ -1,9 +1,12 @@
 """Tasks."""
 
 from __future__ import annotations
+import json
 from dataclasses import dataclass
 from datasets import load_dataset
+from pydantic import BaseModel
 from pydantic_ai import Agent, models
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
@@ -15,8 +18,8 @@ from agentensor.train import Trainer
 
 
 @dataclass
-class UnstoppableGibberish(Evaluator[str, bool]):
-    """The main metric for unstoppable gibberish is the generation taking too long."""
+class GenerationTimeout(Evaluator[str, bool]):
+    """The generation took too long."""
 
     threshold: float = 10.0
 
@@ -26,10 +29,35 @@ class UnstoppableGibberish(Evaluator[str, bool]):
 
 
 @dataclass
+class MultiLabelClassificationAccuracy(Evaluator[str, bool]):
+    """Classification accuracy evaluator."""
+
+    async def evaluate(self, ctx: EvaluatorContext[str, bool]) -> bool:
+        """Evaluate the accuracy of the classification."""
+        try:
+            output = json.loads(ctx.output.text)
+        except json.JSONDecodeError:
+            return False
+        expected = ctx.expected_output
+        return set(output) == set(expected)
+
+
+@dataclass
 class EvaluateState(ModuleState):
     """State of the graph."""
 
     agent_prompt: TextTensor = TextTensor(text="")
+
+
+class ClassificationResults(BaseModel, use_attribute_docstrings=True):
+    """Classification result for a data."""
+
+    labels: list[str]
+    """labels for this data point."""
+
+    def __str__(self) -> str:
+        """Return the string representation of the classification results."""
+        return json.dumps(self.labels)
 
 
 class HFMultiClassClassificationTask:
@@ -75,12 +103,16 @@ class AgentNode(AgentModule[EvaluateState, None, TextTensor]):
         agent = Agent(
             model=model,
             system_prompt=ctx.state.agent_prompt.text,
+            output_type=ClassificationResults,
         )
-        result = await agent.run(ctx.state.input.text)
-        output = result.data
+        try:
+            result = await agent.run(ctx.state.input.text)
+            output = result.output
+        except UnexpectedModelBehavior:
+            output = "Error"
 
         output_tensor = TextTensor(
-            output,
+            str(output),
             parents=[ctx.state.input, ctx.state.agent_prompt],
             requires_grad=True,
         )
@@ -93,15 +125,20 @@ if __name__ == "__main__":
         model_name="llama3.2:1b",
         provider=OpenAIProvider(base_url="http://localhost:11434/v1", api_key="ollama"),
     )
+    # model = "openai:gpt-4o-mini"
 
     task = HFMultiClassClassificationTask(
         task_repo="knowledgator/events_classification_biotech",
-        evaluators=[UnstoppableGibberish()],
+        evaluators=[GenerationTimeout(), MultiLabelClassificationAccuracy()],
         model=model,
     )
     state = EvaluateState(
         agent_prompt=TextTensor(
-            "You are a helpful assistant.",
+            (
+                "Classify the following text into one of the following "
+                "categories: [expanding industry, new initiatives or programs, "
+                "article publication, other]"
+            ),
             requires_grad=True,
             model=model,
         )

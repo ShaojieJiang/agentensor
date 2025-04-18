@@ -14,7 +14,7 @@ dev = [
   "pytest-cov>=4.1.0",
   "ruff>=0.11.3",
   "smokeshow>=0.5.0",
-  "types-requests",
+  "types-requests"
 ]
 docs = [
   "mkdocs",
@@ -26,18 +26,17 @@ docs = [
 
 [project]
 dependencies = [
-    "datasets>=3.5.0",
-    "logfire>=3.14.0",
-    "pydantic-ai>=0.0.55",
+  "datasets>=3.5.0",
+  "logfire>=3.14.0",
+  "pydantic-ai>=0.1.2"
 ]
 description = "Add your description here"
 license = {file = "LICENSE"}
 name = "agentensor"
 readme = "README.md"
 requires-python = ">=3.12"
-version = "0.0.1"
 url = "https://github.com/ShaojieJiang/agentensor"
-
+version = "0.0.1"
 
 [tool.coverage.report]
 exclude_lines = [
