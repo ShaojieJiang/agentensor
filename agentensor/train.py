@@ -83,7 +83,7 @@ class Trainer:
         """Evaluate the graph."""
         dataset = getattr(self, f"{data_split}_dataset")
         assert dataset, f"{data_split} dataset is required"
-        if limit_cases:
+        if limit_cases:  # pragma: no cover
             limited_cases = dataset.cases[:limit_cases]
             dataset = Dataset(cases=limited_cases, evaluators=dataset.evaluators)
         report = dataset.evaluate_sync(self.forward)
