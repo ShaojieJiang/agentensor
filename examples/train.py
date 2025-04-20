@@ -48,8 +48,9 @@ class AgentNode(AgentModule[TrainState, None, TextTensor]):
             model="openai:gpt-4o-mini",
             system_prompt=ctx.state.agent_prompt.text,
         )
+        assert ctx.state.input
         result = await agent.run(ctx.state.input.text)
-        output = result.data
+        output = result.output
 
         output_tensor = TextTensor(
             output,

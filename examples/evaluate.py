@@ -105,6 +105,7 @@ class AgentNode(AgentModule[EvaluateState, None, TextTensor]):
             system_prompt=ctx.state.agent_prompt.text,
             output_type=ClassificationResults,
         )
+        assert ctx.state.input
         try:
             result = await agent.run(ctx.state.input.text)
             output = result.output
