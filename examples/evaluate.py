@@ -29,17 +29,17 @@ class GenerationTimeout(Evaluator[str, bool]):
 
 
 @dataclass
-class MultiLabelClassificationAccuracy(Evaluator[str, bool]):
+class MultiLabelClassificationAccuracy(Evaluator):
     """Classification accuracy evaluator."""
 
-    async def evaluate(self, ctx: EvaluatorContext[str, bool]) -> bool:
+    async def evaluate(self, ctx: EvaluatorContext) -> bool:
         """Evaluate the accuracy of the classification."""
         try:
             output = json.loads(ctx.output.text)
         except json.JSONDecodeError:
             return False
         expected = ctx.expected_output
-        return set(output) == set(expected)
+        return set(output) == set(expected)  # type: ignore[arg-type]
 
 
 @dataclass
@@ -109,7 +109,7 @@ class AgentNode(AgentModule[EvaluateState, None, TextTensor]):
             result = await agent.run(ctx.state.input.text)
             output = result.output
         except UnexpectedModelBehavior:
-            output = "Error"
+            output = "Error"  # type: ignore[assignment]
 
         output_tensor = TextTensor(
             str(output),
