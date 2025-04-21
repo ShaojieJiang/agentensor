@@ -1,7 +1,7 @@
 """Example module."""
 
 from __future__ import annotations
-from pydantic_ai import Agent
+from pydantic_ai import Agent, models
 
 
 class TextTensor:
@@ -12,13 +12,15 @@ class TextTensor:
         text: str,
         parents: list[TextTensor] | None = None,
         requires_grad: bool = False,
+        model: models.Model | models.KnownModelName | str | None = None,
     ) -> None:
         """Initialize a TextTensor."""
         self.text = text
         self.requires_grad = requires_grad
-        self.text_grad = ""
+        self.gradients: list[str] = []
         self.agent = Agent(
-            model="openai:gpt-4o-mini", system_prompt="Answer the user's question."
+            model=model or "openai:gpt-4o-mini",
+            system_prompt="Answer the user's question.",
         )
         self.parents: list[TextTensor] = parents or []
 
@@ -32,7 +34,7 @@ class TextTensor:
             return
 
         if self.requires_grad:
-            self.text_grad = grad
+            self.gradients.append(grad)
             for parent in self.parents:
                 if not parent.requires_grad:
                     continue
@@ -47,6 +49,15 @@ class TextTensor:
             f">{grad}\n\nHow should I improve the input to get a "
             f"better output?"
         ).data
+
+    @property
+    def text_grad(self) -> str:
+        """String representation of the gradients."""
+        return " ".join(self.gradients)
+
+    def zero_grad(self) -> None:
+        """Zero the gradients."""
+        self.gradients = []
 
     def __str__(self) -> str:
         """Return the text as a string."""

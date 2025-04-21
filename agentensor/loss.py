@@ -16,7 +16,7 @@ class LLMTensorJudge(Evaluator[TextTensor, TextTensor, Any]):
     """
 
     rubric: str
-    model: models.Model | models.KnownModelName | None = None
+    model: models.KnownModelName | None = None
     include_input: bool = True
 
     async def evaluate(

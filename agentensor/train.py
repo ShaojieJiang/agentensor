@@ -1,8 +1,10 @@
 """Trainer."""
 
-from typing import Any
+from typing import Any, Literal
 from pydantic_evals import Dataset
+from pydantic_evals.reporting import EvaluationReport
 from pydantic_graph import Graph
+from pydantic_graph.nodes import DepsT, StateT
 from agentensor.module import AgentModule, ModuleState
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
@@ -13,31 +15,39 @@ class Trainer:
 
     def __init__(
         self,
-        graph: Graph[ModuleState, None, TextTensor],
+        graph: Graph[StateT, DepsT, TextTensor],
+        graph_state: ModuleState,
         start_node: type[AgentModule],
-        dataset: Dataset[TextTensor, TextTensor, Any],
-        optimizer: Optimizer,
-        epochs: int,
+        train_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
+        eval_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
+        test_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
+        optimizer: Optimizer | None = None,
+        epochs: int = 10,
         stop_threshold: float = 0.95,
     ):
         """Initialize the trainer."""
         self.graph = graph
+        self.graph_state = graph_state
         self.start_node = start_node
-        self.dataset = dataset
         self.optimizer = optimizer
         self.epochs = epochs
         self.stop_threshold = stop_threshold
+        self.train_dataset = train_dataset
+        self.eval_dataset = eval_dataset
+        self.test_dataset = test_dataset
 
-    async def step(self, x: TextTensor) -> TextTensor:
-        """Step the optimizer."""
-        state = ModuleState(input=x)
-        result = await self.graph.run(self.start_node(), state=state)  # type: ignore[arg-type]
+    async def forward(self, x: TextTensor) -> TextTensor:
+        """Forward the graph."""
+        self.graph_state.input = x
+        result = await self.graph.run(self.start_node(), state=self.graph_state)  # type: ignore[arg-type]
         return result.output
 
     def train(self) -> None:
-        """Train the model."""
+        """Train the graph."""
+        assert self.train_dataset, "Train dataset is required"
+        assert self.optimizer, "Optimizer is required"
         for i in range(self.epochs):
-            report = self.dataset.evaluate_sync(self.step)
+            report = self.evaluate("train")
             report.print(
                 include_input=True, include_output=True, include_durations=True
             )
@@ -64,3 +74,23 @@ class Trainer:
             if performance >= self.stop_threshold:
                 print("Optimization complete.")
                 break
+
+    def evaluate(
+        self,
+        data_split: Literal["train", "eval", "test"] = "eval",
+        limit_cases: int | None = None,
+    ) -> EvaluationReport:
+        """Evaluate the graph."""
+        dataset = getattr(self, f"{data_split}_dataset")
+        assert dataset, f"{data_split} dataset is required"
+        if limit_cases:  # pragma: no cover
+            limited_cases = dataset.cases[:limit_cases]
+            dataset = Dataset(cases=limited_cases, evaluators=dataset.evaluators)
+        report = dataset.evaluate_sync(self.forward)
+
+        return report
+
+    def test(self, limit_cases: int | None = None) -> None:
+        """Test the graph."""
+        report = self.evaluate("test", limit_cases=limit_cases)
+        report.print(include_input=True, include_output=True, include_durations=True)
