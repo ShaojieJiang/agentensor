@@ -10,7 +10,7 @@ from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
-from pydantic_evals.evaluators import Evaluator, EvaluatorContext
+from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 from pydantic_graph import End, Graph, GraphRunContext
 from agentensor.module import AgentModule, ModuleState
 from agentensor.tensor import TextTensor
@@ -23,9 +23,15 @@ class GenerationTimeout(Evaluator[str, bool]):
 
     threshold: float = 10.0
 
-    async def evaluate(self, ctx: EvaluatorContext[str, bool]) -> bool:
+    async def evaluate(self, ctx: EvaluatorContext[str, bool]) -> EvaluationReason:
         """Evaluate the time taken to generate the output."""
-        return ctx.duration <= self.threshold  # pragma: no cover
+        return EvaluationReason(
+            value=ctx.duration <= self.threshold,
+            reason=(
+                f"The generation took {ctx.duration} seconds, which is longer "
+                f"than the threshold of {self.threshold} seconds."
+            ),
+        )
 
 
 @dataclass
