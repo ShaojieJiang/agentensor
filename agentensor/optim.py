@@ -1,7 +1,8 @@
 """Optimizer module."""
 
+from langgraph.graph import StateGraph
 from pydantic_ai import Agent, models
-from agentensor.module import ModuleState
+from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
 
 
@@ -10,14 +11,15 @@ class Optimizer:
 
     def __init__(
         self,
-        state: ModuleState,
+        graph: StateGraph,
         model: models.Model | models.KnownModelName | str | None = None,
     ) -> None:
         """Initialize the optimizer."""
         self.params: list[TextTensor] = [
-            attr
-            for attr in vars(state).values()
-            if isinstance(attr, TextTensor) and attr.requires_grad
+            param
+            for node in graph.nodes.values()
+            if isinstance(node.runnable.afunc, AgentModule)
+            for param in node.runnable.afunc.get_params()
         ]
         self.agent: Agent = Agent(
             model=model or "openai:gpt-4o-mini",

@@ -14,12 +14,10 @@ class ModuleState:
 class AgentModule:
     """Agent module."""
 
-    @classmethod
-    def get_params(cls) -> list[TextTensor]:
+    def get_params(self) -> list[TextTensor]:
         """Get the parameters of the module."""
         params = []
-        for base in cls.__mro__:
-            for _, attr in base.__dict__.items():
-                if isinstance(attr, TextTensor) and attr.requires_grad:
-                    params.append(attr)
+        for _, attr in self.__dict__.items():
+            if isinstance(attr, TextTensor) and attr.requires_grad:
+                params.append(attr)
         return params

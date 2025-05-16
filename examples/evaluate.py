@@ -52,7 +52,6 @@ class MultiLabelClassificationAccuracy(Evaluator):
 class EvaluateState(TypedDict):
     """State of the graph."""
 
-    agent_prompt: TextTensor = TextTensor(text="")
     input: TextTensor = TextTensor(text="")
     output: TextTensor = TextTensor(text="")
 
@@ -107,11 +106,14 @@ class HFMultiClassClassificationTask:
 class AgentNode(AgentModule):
     """Agent node."""
 
+    system_prompt: TextTensor
+    model: models.Model | models.KnownModelName | str
+
     async def __call__(self, state: EvaluateState) -> dict:
         """Run the agent node."""
         agent = Agent(
-            model=model,
-            system_prompt=state["agent_prompt"].text,
+            model=self.model or "openai:gpt-4o-mini",
+            system_prompt=self.system_prompt.text,
             output_type=ClassificationResults,
         )
         assert state["input"]
@@ -123,7 +125,7 @@ class AgentNode(AgentModule):
 
         output_tensor = TextTensor(
             str(output),
-            parents=[state["input"], state["agent_prompt"]],
+            parents=[state["input"], self.system_prompt],
             requires_grad=True,
         )
 
@@ -142,27 +144,29 @@ if __name__ == "__main__":
         evaluators=[GenerationTimeout(), MultiLabelClassificationAccuracy()],
         model=model,
     )
-    state = EvaluateState(
-        agent_prompt=TextTensor(
-            (
-                "Classify the following text into one of the following "
-                "categories: [expanding industry, new initiatives or programs, "
-                "article publication, other]"
-            ),
-            requires_grad=True,
-            model=model,
-        )
-    )
+    state = EvaluateState()
     graph = StateGraph(EvaluateState)
-    graph.add_node("agent", AgentNode())
+    graph.add_node(
+        "agent",
+        AgentNode(
+            system_prompt=TextTensor(
+                (
+                    "Classify the following text into one of the following "
+                    "categories: [expanding industry, new initiatives or programs, "
+                    "article publication, other]"
+                ),
+                requires_grad=True,
+                model=model,
+            ),
+            model=model,
+        ),
+    )
     graph.add_edge(START, "agent")
     graph.add_edge("agent", END)
     compiled_graph = graph.compile()
-    # graph = Graph(nodes=[AgentNode])
     trainer = Trainer(
         compiled_graph,
         state,
-        # AgentNode,  # type: ignore[arg-type]
         train_dataset=task.dataset["train"],
         test_dataset=task.dataset["test"],
     )
