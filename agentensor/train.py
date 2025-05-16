@@ -4,7 +4,6 @@ from typing import Any, Literal
 from langgraph.graph.graph import CompiledGraph
 from pydantic_evals import Dataset
 from pydantic_evals.reporting import EvaluationReport
-from agentensor.module import ModuleState
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
 
@@ -15,7 +14,6 @@ class Trainer:
     def __init__(
         self,
         graph: CompiledGraph,
-        graph_state: ModuleState,
         train_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
         eval_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
         test_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
@@ -25,7 +23,6 @@ class Trainer:
     ):
         """Initialize the trainer."""
         self.graph = graph
-        self.graph_state = graph_state
         self.optimizer = optimizer
         self.epochs = epochs
         self.stop_threshold = stop_threshold
@@ -35,8 +32,7 @@ class Trainer:
 
     async def forward(self, x: TextTensor) -> TextTensor:
         """Forward the graph."""
-        self.graph_state["input"] = x
-        result = await self.graph.ainvoke(self.graph_state)
+        result = await self.graph.ainvoke({"output": x})
         return result["output"]
 
     def train(self) -> None:

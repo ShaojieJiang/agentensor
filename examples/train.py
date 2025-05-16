@@ -37,7 +37,6 @@ class FormatJudge(LLMTensorJudge):
 class TrainState(TypedDict):
     """State of the graph."""
 
-    input: TextTensor = TextTensor(text="")
     output: TextTensor = TextTensor(text="")
 
 
@@ -55,13 +54,13 @@ class AgentNode(AgentModule):
             system_prompt=self.system_prompt.text,
             retries=10,
         )
-        assert state["input"]
-        result = await agent.run(state["input"].text)
+        assert state["output"]
+        result = await agent.run(state["output"].text)
         output = result.output
 
         output_tensor = TextTensor(
             output,
-            parents=[state["input"], self.system_prompt],
+            parents=[state["output"], self.system_prompt],
             requires_grad=True,
             model=self.model or "openai:gpt-4o-mini",
         )
@@ -102,7 +101,6 @@ def main() -> None:
         ],
     )
 
-    state = TrainState()
     graph = StateGraph(TrainState)
     graph.add_node(
         "agent",
@@ -119,7 +117,6 @@ def main() -> None:
     optimizer = Optimizer(graph, model=model)
     trainer = Trainer(
         compiled_graph,
-        state,
         train_dataset=dataset,
         optimizer=optimizer,
         epochs=15,

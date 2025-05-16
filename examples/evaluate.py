@@ -52,7 +52,6 @@ class MultiLabelClassificationAccuracy(Evaluator):
 class EvaluateState(TypedDict):
     """State of the graph."""
 
-    input: TextTensor = TextTensor(text="")
     output: TextTensor = TextTensor(text="")
 
 
@@ -116,16 +115,16 @@ class AgentNode(AgentModule):
             system_prompt=self.system_prompt.text,
             output_type=ClassificationResults,
         )
-        assert state["input"]
+        assert state["output"]
         try:
-            result = await agent.run(state["input"].text)
+            result = await agent.run(state["output"].text)
             output = result.output
         except UnexpectedModelBehavior:
             output = "Error"  # type: ignore[assignment]
 
         output_tensor = TextTensor(
             str(output),
-            parents=[state["input"], self.system_prompt],
+            parents=[state["output"], self.system_prompt],
             requires_grad=True,
         )
 
@@ -144,7 +143,6 @@ if __name__ == "__main__":
         evaluators=[GenerationTimeout(), MultiLabelClassificationAccuracy()],
         model=model,
     )
-    state = EvaluateState()
     graph = StateGraph(EvaluateState)
     graph.add_node(
         "agent",
@@ -166,7 +164,6 @@ if __name__ == "__main__":
     compiled_graph = graph.compile()
     trainer = Trainer(
         compiled_graph,
-        state,
         train_dataset=task.dataset["train"],
         test_dataset=task.dataset["test"],
     )
