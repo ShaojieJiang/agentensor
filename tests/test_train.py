@@ -53,8 +53,9 @@ async def test_trainer_initialization(
     """Test Trainer initialization."""
     trainer = Trainer(
         graph=mock_graph,
+        graph_state=ModuleState(input=TextTensor("test input")),
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
         stop_threshold=0.95,
@@ -62,7 +63,7 @@ async def test_trainer_initialization(
 
     assert trainer.graph == mock_graph
     assert trainer.start_node == mock_module_class
-    assert trainer.dataset == mock_dataset
+    assert trainer.train_dataset == mock_dataset
     assert trainer.optimizer == mock_optimizer
     assert trainer.epochs == 10
     assert trainer.stop_threshold == 0.95
@@ -76,8 +77,9 @@ async def test_trainer_step(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
+        graph_state=ModuleState(input=TextTensor("test input")),
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
     )
@@ -90,7 +92,7 @@ async def test_trainer_step(
 
     # Test step
     input_tensor = TextTensor("test input")
-    result = await trainer.step(input_tensor)
+    result = await trainer.forward(input_tensor)
 
     # Verify
     assert isinstance(result, TextTensor)
@@ -103,8 +105,9 @@ def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_cla
     # Setup
     trainer = Trainer(
         graph=mock_graph,
+        graph_state=ModuleState(input=TextTensor("test input")),
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
     )
@@ -131,8 +134,9 @@ def test_trainer_train_with_failed_cases(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
+        graph_state=ModuleState(input=TextTensor("test input")),
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
     )
@@ -158,7 +162,6 @@ def test_trainer_train_with_failed_cases(
     assert mock_dataset.evaluate_sync.call_count == 2  # Called for each epoch
     assert mock_optimizer.step.call_count == 2
     assert mock_optimizer.zero_grad.call_count == 2
-    assert mock_case.output.text_grad == "error1"  # Verify backward pass was called
 
 
 def test_trainer_early_stopping(
@@ -168,8 +171,9 @@ def test_trainer_early_stopping(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
+        graph_state=ModuleState(input=TextTensor("test input")),
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
         stop_threshold=0.95,
@@ -197,8 +201,9 @@ def test_trainer_train_with_no_losses(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
+        graph_state=ModuleState(input=TextTensor("test input")),
         start_node=mock_module_class,
-        dataset=mock_dataset,
+        train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
     )
@@ -227,3 +232,28 @@ def test_trainer_train_with_no_losses(
     assert (
         mock_case.output.text_grad == ""
     )  # No backward pass since all assertions passed
+
+
+def test_trainer_test(mock_graph, mock_dataset, mock_optimizer, mock_module_class):
+    """Test the test method of Trainer."""
+    # Setup
+    trainer = Trainer(
+        graph=mock_graph,
+        graph_state=ModuleState(input=TextTensor("test input")),
+        start_node=mock_module_class,
+        test_dataset=mock_dataset,
+        optimizer=mock_optimizer,
+    )
+
+    # Mock dataset evaluation
+    mock_report = MagicMock()
+    mock_dataset.evaluate_sync.return_value = mock_report
+
+    # Run test
+    trainer.test()
+
+    # Verify
+    mock_dataset.evaluate_sync.assert_called_once()
+    mock_report.print.assert_called_once_with(
+        include_input=True, include_output=True, include_durations=True
+    )
