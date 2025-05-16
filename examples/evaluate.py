@@ -8,7 +8,6 @@ from datasets import load_dataset
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
 from pydantic_ai import Agent, models
-from pydantic_ai.exceptions import UnexpectedModelBehavior
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
@@ -105,30 +104,13 @@ class HFMultiClassClassificationTask:
 class AgentNode(AgentModule):
     """Agent node."""
 
-    system_prompt: TextTensor
-    model: models.Model | models.KnownModelName | str
-
-    async def __call__(self, state: EvaluateState) -> dict:
-        """Run the agent node."""
-        agent = Agent(
+    def get_agent(self) -> Agent:
+        """Get agent instance."""
+        return Agent(
             model=self.model or "openai:gpt-4o-mini",
             system_prompt=self.system_prompt.text,
             output_type=ClassificationResults,
         )
-        assert state["output"]
-        try:
-            result = await agent.run(state["output"].text)
-            output = result.output
-        except UnexpectedModelBehavior:
-            output = "Error"  # type: ignore[assignment]
-
-        output_tensor = TextTensor(
-            str(output),
-            parents=[state["output"], self.system_prompt],
-            requires_grad=True,
-        )
-
-        return {"output": output_tensor}
 
 
 if __name__ == "__main__":

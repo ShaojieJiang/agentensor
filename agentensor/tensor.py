@@ -48,7 +48,7 @@ class TextTensor:
             f"output: \n\n>{output_text}\n\nHere is the feedback: \n\n"
             f">{grad}\n\nHow should I improve the input to get a "
             f"better output?"
-        ).data
+        ).output
 
     @property
     def text_grad(self) -> str:

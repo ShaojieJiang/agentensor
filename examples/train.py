@@ -44,28 +44,12 @@ class TrainState(TypedDict):
 class AgentNode(AgentModule):
     """Agent node."""
 
-    system_prompt: TextTensor
-    model: models.Model | models.KnownModelName | str
-
-    async def __call__(self, state: TrainState) -> dict:
-        """Run the agent node."""
-        agent = Agent(
+    def get_agent(self) -> Agent:
+        """Get agent instance."""
+        return Agent(
             model=self.model or "openai:gpt-4o-mini",
             system_prompt=self.system_prompt.text,
-            retries=10,
         )
-        assert state["output"]
-        result = await agent.run(state["output"].text)
-        output = result.output
-
-        output_tensor = TextTensor(
-            output,
-            parents=[state["output"], self.system_prompt],
-            requires_grad=True,
-            model=self.model or "openai:gpt-4o-mini",
-        )
-
-        return {"output": output_tensor}
 
 
 def main() -> None:
