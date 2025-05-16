@@ -3,7 +3,9 @@
 from __future__ import annotations
 import json
 from dataclasses import dataclass
+from typing import TypedDict
 from datasets import load_dataset
+from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel
 from pydantic_ai import Agent, models
 from pydantic_ai.exceptions import UnexpectedModelBehavior
@@ -11,8 +13,7 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
-from pydantic_graph import End, Graph, GraphRunContext
-from agentensor.module import AgentModule, ModuleState
+from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
 from agentensor.train import Trainer
 
@@ -48,11 +49,12 @@ class MultiLabelClassificationAccuracy(Evaluator):
         return set(output) == set(expected)  # type: ignore[arg-type]
 
 
-@dataclass
-class EvaluateState(ModuleState):
+class EvaluateState(TypedDict):
     """State of the graph."""
 
     agent_prompt: TextTensor = TextTensor(text="")
+    input: TextTensor = TextTensor(text="")
+    output: TextTensor = TextTensor(text="")
 
 
 class ClassificationResults(BaseModel, use_attribute_docstrings=True):
@@ -101,30 +103,31 @@ class HFMultiClassClassificationTask:
         return dataset
 
 
-class AgentNode(AgentModule[EvaluateState, None, TextTensor]):
+@dataclass
+class AgentNode(AgentModule):
     """Agent node."""
 
-    async def run(self, ctx: GraphRunContext[EvaluateState, None]) -> End[TextTensor]:  # type: ignore[override]
+    async def __call__(self, state: EvaluateState) -> dict:
         """Run the agent node."""
         agent = Agent(
             model=model,
-            system_prompt=ctx.state.agent_prompt.text,
+            system_prompt=state["agent_prompt"].text,
             output_type=ClassificationResults,
         )
-        assert ctx.state.input
+        assert state["input"]
         try:
-            result = await agent.run(ctx.state.input.text)
+            result = await agent.run(state["input"].text)
             output = result.output
         except UnexpectedModelBehavior:
             output = "Error"  # type: ignore[assignment]
 
         output_tensor = TextTensor(
             str(output),
-            parents=[ctx.state.input, ctx.state.agent_prompt],
+            parents=[state["input"], state["agent_prompt"]],
             requires_grad=True,
         )
 
-        return End(output_tensor)
+        return {"output": output_tensor}
 
 
 if __name__ == "__main__":
@@ -150,11 +153,16 @@ if __name__ == "__main__":
             model=model,
         )
     )
-    graph = Graph(nodes=[AgentNode])
+    graph = StateGraph(EvaluateState)
+    graph.add_node("agent", AgentNode())
+    graph.add_edge(START, "agent")
+    graph.add_edge("agent", END)
+    compiled_graph = graph.compile()
+    # graph = Graph(nodes=[AgentNode])
     trainer = Trainer(
-        graph,
+        compiled_graph,
         state,
-        AgentNode,  # type: ignore[arg-type]
+        # AgentNode,  # type: ignore[arg-type]
         train_dataset=task.dataset["train"],
         test_dataset=task.dataset["test"],
     )
