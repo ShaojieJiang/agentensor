@@ -51,7 +51,7 @@ class MultiLabelClassificationAccuracy(Evaluator):
 class EvaluateState(TypedDict):
     """State of the graph."""
 
-    output: TextTensor = TextTensor(text="")
+    output: TextTensor
 
 
 class ClassificationResults(BaseModel, use_attribute_docstrings=True):
@@ -109,7 +109,7 @@ class AgentNode(AgentModule):
         return Agent(
             model=self.model or "openai:gpt-4o-mini",
             system_prompt=self.system_prompt.text,
-            output_type=ClassificationResults,
+            output_type=ClassificationResults,  # type: ignore[arg-type]
         )
 
 

@@ -18,8 +18,8 @@ class Optimizer:
         self.params: list[TextTensor] = [
             param
             for node in graph.nodes.values()
-            if isinstance(node.runnable.afunc, AgentModule)
-            for param in node.runnable.afunc.get_params()
+            if isinstance(node.runnable.afunc, AgentModule)  # type: ignore[attr-defined]
+            for param in node.runnable.afunc.get_params()  # type: ignore[attr-defined]
         ]
         self.agent: Agent = Agent(
             model=model or "openai:gpt-4o-mini",

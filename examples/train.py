@@ -21,7 +21,7 @@ class ChineseLanguageJudge(LLMTensorJudge):
     """Chinese language judge."""
 
     rubric: str = "The output should be in Chinese."
-    model: models.KnownModelName = "openai:gpt-4o-mini"
+    model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
     include_input = True
 
 
@@ -30,14 +30,14 @@ class FormatJudge(LLMTensorJudge):
     """Format judge."""
 
     rubric: str = "The output should start by introducing itself."
-    model: models.KnownModelName = "openai:gpt-4o-mini"
+    model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
     include_input = True
 
 
 class TrainState(TypedDict):
     """State of the graph."""
 
-    output: TextTensor = TextTensor(text="")
+    output: TextTensor
 
 
 @dataclass
