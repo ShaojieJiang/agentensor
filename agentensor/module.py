@@ -12,14 +12,15 @@ class AgentModule(ABC):
     """Agent module."""
 
     system_prompt: TextTensor
-    model: models.Model | models.KnownModelName | str
+    model: models.Model | models.KnownModelName | str = "openai:gpt-4o"
 
     def get_params(self) -> list[TextTensor]:
         """Get the parameters of the module."""
         params = []
-        for _, attr in self.__dict__.items():
-            if isinstance(attr, TextTensor) and attr.requires_grad:
-                params.append(attr)
+        for field_name in self.__dataclass_fields__.keys():
+            field = getattr(self, field_name)
+            if isinstance(field, TextTensor) and field.requires_grad:
+                params.append(field)
         return params
 
     async def __call__(self, state: dict) -> dict:

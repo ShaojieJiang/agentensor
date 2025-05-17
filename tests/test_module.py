@@ -1,8 +1,9 @@
 """Test module for the Module class."""
 
+from dataclasses import dataclass
 from unittest.mock import MagicMock, patch
 import pytest
-from agentensor.module import AgentModule, ModuleState
+from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
 
 
@@ -15,28 +16,21 @@ def mock_agent():
         yield mock_agent
 
 
-def test_module_state_initialization(mock_agent):
-    """Test ModuleState initialization."""
-    input_tensor = TextTensor("test input")
-    state = ModuleState(input=input_tensor)
-
-    assert isinstance(state.input, TextTensor)
-    assert state.input.text == "test input"
-
-
-def test_module_get_params(mock_agent):
+def test_module_get_params():
     """Test AgentModule.get_params() method."""
 
+    @dataclass
     class TestModule(AgentModule):
-        param1 = TextTensor("param1", requires_grad=True)
-        param2 = TextTensor("param2", requires_grad=False)
-        param3 = TextTensor("param3", requires_grad=True)
-        non_param = "not a tensor"
+        system_prompt: TextTensor = TextTensor("param1", requires_grad=True)
+        param2: TextTensor = TextTensor("param2", requires_grad=False)
+        param3: TextTensor = TextTensor("param3", requires_grad=True)
+        model: str = "openai:gpt-4o"
+        non_param: str = "not a tensor"
 
         def __init__(self):
             pass
 
-        def run(self, state: ModuleState) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
@@ -60,7 +54,7 @@ def test_module_get_params_empty(mock_agent):
         def __init__(self):
             pass
 
-        def run(self, state: ModuleState) -> None:
+        def run(self, state: dict) -> None:
             """Dummy run method for testing."""
             pass
 
@@ -79,7 +73,7 @@ def test_module_get_params_inheritance(mock_agent):
         def __init__(self):
             pass
 
-        def run(self, state: ModuleState) -> None:
+        def run(self, state: dict) -> None:
             """Dummy run method for testing."""
             pass
 
@@ -89,7 +83,7 @@ def test_module_get_params_inheritance(mock_agent):
         def __init__(self):
             super().__init__()
 
-        def run(self, state: ModuleState) -> None:
+        def run(self, state: dict) -> None:
             """Dummy run method for testing."""
             pass
 
