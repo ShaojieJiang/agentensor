@@ -78,7 +78,7 @@ def test_backward_with_parent_requires_grad_true(mock_agent):
     child_tensor = TextTensor("child text", parents=[parent_tensor], requires_grad=True)
 
     # Mock the agent's response for gradient calculation
-    mock_agent.run_sync.return_value.data = "parent gradient"
+    mock_agent.run_sync.return_value.output = "parent gradient"
 
     # Perform backward pass
     child_tensor.backward("some gradient")
@@ -103,7 +103,7 @@ def test_calc_grad(mock_agent):
     tensor = TextTensor("test text")
 
     # Mock the agent's response
-    mock_agent.run_sync.return_value.data = "improved input"
+    mock_agent.run_sync.return_value.output = "improved input"
 
     # Call calc_grad
     result = tensor.calc_grad("input text", "output text", "feedback")
