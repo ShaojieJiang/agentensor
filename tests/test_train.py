@@ -53,7 +53,6 @@ async def test_trainer_initialization(
     """Test Trainer initialization."""
     trainer = Trainer(
         graph=mock_graph,
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
@@ -61,7 +60,6 @@ async def test_trainer_initialization(
     )
 
     assert trainer.graph == mock_graph
-    assert trainer.start_node == mock_module_class
     assert trainer.train_dataset == mock_dataset
     assert trainer.optimizer == mock_optimizer
     assert trainer.epochs == 10
@@ -76,14 +74,14 @@ async def test_trainer_step(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
     )
 
     # Mock the graph's run method
-    mock_graph.run = AsyncMock()
+    mock_graph.ainvoke = AsyncMock()
+    mock_graph.ainvoke.return_value = {"output": TextTensor("test output")}
 
     # Test step
     input_tensor = TextTensor("test input")
@@ -92,7 +90,7 @@ async def test_trainer_step(
     # Verify
     assert isinstance(result, TextTensor)
     assert result.text == "test output"
-    mock_graph.run.assert_called_once()
+    mock_graph.ainvoke.assert_called_once()
 
 
 def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_class):
@@ -100,7 +98,6 @@ def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_cla
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
@@ -128,7 +125,6 @@ def test_trainer_train_with_failed_cases(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
@@ -164,7 +160,6 @@ def test_trainer_early_stopping(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
@@ -193,7 +188,6 @@ def test_trainer_train_with_no_losses(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
@@ -230,7 +224,6 @@ def test_trainer_test(mock_graph, mock_dataset, mock_optimizer, mock_module_clas
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        start_node=mock_module_class,
         test_dataset=mock_dataset,
         optimizer=mock_optimizer,
     )
