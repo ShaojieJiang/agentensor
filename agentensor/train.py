@@ -14,6 +14,7 @@ class Trainer:
     def __init__(
         self,
         graph: CompiledGraph,
+        graph_recursion_limit: int = 25,
         train_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
         eval_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
         test_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
@@ -23,6 +24,7 @@ class Trainer:
     ):
         """Initialize the trainer."""
         self.graph = graph
+        self.graph_recursion_limit = graph_recursion_limit
         self.optimizer = optimizer
         self.epochs = epochs
         self.stop_threshold = stop_threshold
@@ -32,7 +34,9 @@ class Trainer:
 
     async def forward(self, x: TextTensor) -> TextTensor:
         """Forward the graph."""
-        result = await self.graph.ainvoke({"output": x})
+        result = await self.graph.ainvoke(
+            {"output": x}, {"recursion_limit": self.graph_recursion_limit}
+        )
         return result["output"]
 
     def train(self) -> None:
