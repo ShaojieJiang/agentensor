@@ -47,14 +47,15 @@ def test_module_get_params():
 def test_module_get_params_empty(mock_agent):
     """Test AgentModule.get_params() with no parameters."""
 
+    @dataclass
     class EmptyModule(AgentModule):
+        system_prompt = TextTensor("param", requires_grad=False)
         non_param = "not a tensor"
-        param = TextTensor("param", requires_grad=False)
 
         def __init__(self):
             pass
 
-        def run(self, state: dict) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
@@ -64,26 +65,28 @@ def test_module_get_params_empty(mock_agent):
     assert len(params) == 0
 
 
-def test_module_get_params_inheritance(mock_agent):
+def test_module_get_params_inheritance():
     """Test AgentModule.get_params() with inheritance."""
 
+    @dataclass
     class ParentModule(AgentModule):
-        parent_param = TextTensor("parent", requires_grad=True)
+        system_prompt = TextTensor("parent", requires_grad=True)
 
         def __init__(self):
             pass
 
-        def run(self, state: dict) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
+    @dataclass
     class ChildModule(ParentModule):
-        child_param = TextTensor("child", requires_grad=True)
+        child_param: TextTensor = TextTensor("child", requires_grad=True)
 
         def __init__(self):
             super().__init__()
 
-        def run(self, state: dict) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
