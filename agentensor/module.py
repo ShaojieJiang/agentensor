@@ -30,7 +30,7 @@ class AgentModule(ABC):
         try:
             result = await agent.run(state["output"].text)
             output = str(result.output)
-        except UnexpectedModelBehavior:
+        except UnexpectedModelBehavior:  # pragma: no cover
             output = "Error"
 
         output_tensor = TextTensor(
@@ -45,4 +45,4 @@ class AgentModule(ABC):
     @abstractmethod
     def get_agent(self) -> Agent:
         """Get agent instance."""
-        pass  # programa: no cover
+        pass  # pragma: no cover

@@ -1,7 +1,7 @@
 """Test module for the Module class."""
 
 from dataclasses import dataclass
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
@@ -97,3 +97,24 @@ def test_module_get_params_inheritance():
     assert all(isinstance(p, TextTensor) for p in params)
     assert all(p.requires_grad for p in params)
     assert {p.text for p in params} == {"parent", "child"}
+
+
+@pytest.mark.asyncio
+async def test_module_call():
+    @dataclass
+    class TestModule(AgentModule):
+        system_prompt: TextTensor = TextTensor("system prompt", requires_grad=True)
+
+        def get_agent(self):
+            """Dummy run method for testing."""
+            mock_agent = AsyncMock()
+            run_output = MagicMock()
+            run_output.output = "Output text"
+            mock_agent.run.return_value = run_output
+            return mock_agent
+
+    module = TestModule()
+
+    result = await module({"output": TextTensor("Input text")})
+    assert isinstance(result["output"], TextTensor)
+    assert result["output"].text == "Output text"
