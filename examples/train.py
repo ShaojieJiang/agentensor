@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 import os
-from dataclasses import dataclass
 from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 from pydantic_ai import Agent, models
@@ -16,22 +15,32 @@ from agentensor.tensor import TextTensor
 from agentensor.train import Trainer
 
 
-@dataclass
 class ChineseLanguageJudge(LLMTensorJudge):
     """Chinese language judge."""
 
-    rubric: str = "The output should be in Chinese."
-    model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
-    include_input = True
+    def __init__(
+        self, model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
+    ):
+        """Initialize the Chinese language judge."""
+        super().__init__(
+            rubric="The output should be in Chinese.",
+            model=model,
+            include_input=True,
+        )
 
 
-@dataclass
 class FormatJudge(LLMTensorJudge):
     """Format judge."""
 
-    rubric: str = "The output should start by introducing itself."
-    model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
-    include_input = True
+    def __init__(
+        self, model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
+    ):
+        """Initialize the format judge."""
+        super().__init__(
+            rubric="The output should start by introducing itself.",
+            model=model,
+            include_input=True,
+        )
 
 
 class TrainState(TypedDict):
@@ -40,7 +49,6 @@ class TrainState(TypedDict):
     output: TextTensor
 
 
-@dataclass
 class AgentNode(AgentModule):
     """Agent node."""
 

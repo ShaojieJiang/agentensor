@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 import json
-from dataclasses import dataclass
 from typing import TypedDict
 from datasets import load_dataset
 from langgraph.graph import END, START, StateGraph
@@ -17,11 +16,12 @@ from agentensor.tensor import TextTensor
 from agentensor.train import Trainer
 
 
-@dataclass
 class GenerationTimeout(Evaluator[str, bool]):
     """The generation took too long."""
 
-    threshold: float = 10.0
+    def __init__(self, threshold: float = 10.0):
+        """Initialize the generation timeout evaluator."""
+        self.threshold = threshold
 
     async def evaluate(self, ctx: EvaluatorContext[str, bool]) -> EvaluationReason:
         """Evaluate the time taken to generate the output."""
@@ -34,7 +34,6 @@ class GenerationTimeout(Evaluator[str, bool]):
         )
 
 
-@dataclass
 class MultiLabelClassificationAccuracy(Evaluator):
     """Classification accuracy evaluator."""
 
@@ -100,7 +99,6 @@ class HFMultiClassClassificationTask:
         return dataset
 
 
-@dataclass
 class AgentNode(AgentModule):
     """Agent node."""
 

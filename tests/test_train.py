@@ -37,11 +37,14 @@ def mock_module_class():
     """Create a mock module class for testing."""
 
     class MockModule(AgentModule):
-        def __init__(self):
-            super().__init__()
+        system_prompt: TextTensor = TextTensor("test", requires_grad=True)
 
         async def run(self, state: dict) -> dict:
             return state
+
+        def get_agent(self):
+            """Dummy get_agent method for testing."""
+            pass
 
     return MockModule
 

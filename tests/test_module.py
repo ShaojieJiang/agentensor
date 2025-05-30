@@ -1,6 +1,5 @@
 """Test module for the Module class."""
 
-from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from agentensor.module import AgentModule
@@ -19,16 +18,12 @@ def mock_agent():
 def test_module_get_params():
     """Test AgentModule.get_params() method."""
 
-    @dataclass
     class TestModule(AgentModule):
         system_prompt: TextTensor = TextTensor("param1", requires_grad=True)
         param2: TextTensor = TextTensor("param2", requires_grad=False)
         param3: TextTensor = TextTensor("param3", requires_grad=True)
         model: str = "openai:gpt-4o"
         non_param: str = "not a tensor"
-
-        def __init__(self):
-            pass
 
         def get_agent(self):
             """Dummy run method for testing."""
@@ -47,13 +42,9 @@ def test_module_get_params():
 def test_module_get_params_empty(mock_agent):
     """Test AgentModule.get_params() with no parameters."""
 
-    @dataclass
     class EmptyModule(AgentModule):
-        system_prompt = TextTensor("param", requires_grad=False)
-        non_param = "not a tensor"
-
-        def __init__(self):
-            pass
+        system_prompt: TextTensor = TextTensor("param", requires_grad=False)
+        non_param: str = "not a tensor"
 
         def get_agent(self):
             """Dummy run method for testing."""
@@ -68,23 +59,15 @@ def test_module_get_params_empty(mock_agent):
 def test_module_get_params_inheritance():
     """Test AgentModule.get_params() with inheritance."""
 
-    @dataclass
     class ParentModule(AgentModule):
-        system_prompt = TextTensor("parent", requires_grad=True)
-
-        def __init__(self):
-            pass
+        system_prompt: TextTensor = TextTensor("parent", requires_grad=True)
 
         def get_agent(self):
             """Dummy run method for testing."""
             pass
 
-    @dataclass
     class ChildModule(ParentModule):
         child_param: TextTensor = TextTensor("child", requires_grad=True)
-
-        def __init__(self):
-            super().__init__()
 
         def get_agent(self):
             """Dummy run method for testing."""
@@ -101,7 +84,6 @@ def test_module_get_params_inheritance():
 
 @pytest.mark.asyncio
 async def test_module_call():
-    @dataclass
     class TestModule(AgentModule):
         system_prompt: TextTensor = TextTensor("system prompt", requires_grad=True)
 
