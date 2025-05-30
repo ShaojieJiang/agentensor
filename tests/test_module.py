@@ -1,8 +1,8 @@
 """Test module for the Module class."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-from agentensor.module import AgentModule, ModuleState
+from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
 
 
@@ -15,28 +15,17 @@ def mock_agent():
         yield mock_agent
 
 
-def test_module_state_initialization(mock_agent):
-    """Test ModuleState initialization."""
-    input_tensor = TextTensor("test input")
-    state = ModuleState(input=input_tensor)
-
-    assert isinstance(state.input, TextTensor)
-    assert state.input.text == "test input"
-
-
-def test_module_get_params(mock_agent):
+def test_module_get_params():
     """Test AgentModule.get_params() method."""
 
     class TestModule(AgentModule):
-        param1 = TextTensor("param1", requires_grad=True)
-        param2 = TextTensor("param2", requires_grad=False)
-        param3 = TextTensor("param3", requires_grad=True)
-        non_param = "not a tensor"
+        system_prompt: TextTensor = TextTensor("param1", requires_grad=True)
+        param2: TextTensor = TextTensor("param2", requires_grad=False)
+        param3: TextTensor = TextTensor("param3", requires_grad=True)
+        model: str = "openai:gpt-4o"
+        non_param: str = "not a tensor"
 
-        def __init__(self):
-            pass
-
-        def run(self, state: ModuleState) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
@@ -54,13 +43,10 @@ def test_module_get_params_empty(mock_agent):
     """Test AgentModule.get_params() with no parameters."""
 
     class EmptyModule(AgentModule):
-        non_param = "not a tensor"
-        param = TextTensor("param", requires_grad=False)
+        system_prompt: TextTensor = TextTensor("param", requires_grad=False)
+        non_param: str = "not a tensor"
 
-        def __init__(self):
-            pass
-
-        def run(self, state: ModuleState) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
@@ -70,26 +56,20 @@ def test_module_get_params_empty(mock_agent):
     assert len(params) == 0
 
 
-def test_module_get_params_inheritance(mock_agent):
+def test_module_get_params_inheritance():
     """Test AgentModule.get_params() with inheritance."""
 
     class ParentModule(AgentModule):
-        parent_param = TextTensor("parent", requires_grad=True)
+        system_prompt: TextTensor = TextTensor("parent", requires_grad=True)
 
-        def __init__(self):
-            pass
-
-        def run(self, state: ModuleState) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
     class ChildModule(ParentModule):
-        child_param = TextTensor("child", requires_grad=True)
+        child_param: TextTensor = TextTensor("child", requires_grad=True)
 
-        def __init__(self):
-            super().__init__()
-
-        def run(self, state: ModuleState) -> None:
+        def get_agent(self):
             """Dummy run method for testing."""
             pass
 
@@ -100,3 +80,23 @@ def test_module_get_params_inheritance(mock_agent):
     assert all(isinstance(p, TextTensor) for p in params)
     assert all(p.requires_grad for p in params)
     assert {p.text for p in params} == {"parent", "child"}
+
+
+@pytest.mark.asyncio
+async def test_module_call():
+    class TestModule(AgentModule):
+        system_prompt: TextTensor = TextTensor("system prompt", requires_grad=True)
+
+        def get_agent(self):
+            """Dummy run method for testing."""
+            mock_agent = AsyncMock()
+            run_output = MagicMock()
+            run_output.output = "Output text"
+            mock_agent.run.return_value = run_output
+            return mock_agent
+
+    module = TestModule()
+
+    result = await module({"output": TextTensor("Input text")})
+    assert isinstance(result["output"], TextTensor)
+    assert result["output"].text == "Output text"

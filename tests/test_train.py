@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pydantic_evals import Dataset
 from pydantic_graph import Graph
-from agentensor.module import AgentModule, ModuleState
+from agentensor.module import AgentModule
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
 from agentensor.train import Trainer
@@ -37,11 +37,14 @@ def mock_module_class():
     """Create a mock module class for testing."""
 
     class MockModule(AgentModule):
-        def __init__(self):
-            super().__init__()
+        system_prompt: TextTensor = TextTensor("test", requires_grad=True)
 
-        async def run(self, state: ModuleState) -> ModuleState:
+        async def run(self, state: dict) -> dict:
             return state
+
+        def get_agent(self):
+            """Dummy get_agent method for testing."""
+            pass
 
     return MockModule
 
@@ -53,8 +56,6 @@ async def test_trainer_initialization(
     """Test Trainer initialization."""
     trainer = Trainer(
         graph=mock_graph,
-        graph_state=ModuleState(input=TextTensor("test input")),
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
@@ -62,7 +63,6 @@ async def test_trainer_initialization(
     )
 
     assert trainer.graph == mock_graph
-    assert trainer.start_node == mock_module_class
     assert trainer.train_dataset == mock_dataset
     assert trainer.optimizer == mock_optimizer
     assert trainer.epochs == 10
@@ -77,18 +77,14 @@ async def test_trainer_step(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        graph_state=ModuleState(input=TextTensor("test input")),
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
     )
 
     # Mock the graph's run method
-    mock_graph.run = AsyncMock()
-    state = ModuleState(input=TextTensor("test input"))
-    state.output = TextTensor("test output")
-    mock_graph.run.return_value = state
+    mock_graph.ainvoke = AsyncMock()
+    mock_graph.ainvoke.return_value = {"output": TextTensor("test output")}
 
     # Test step
     input_tensor = TextTensor("test input")
@@ -97,7 +93,7 @@ async def test_trainer_step(
     # Verify
     assert isinstance(result, TextTensor)
     assert result.text == "test output"
-    mock_graph.run.assert_called_once()
+    mock_graph.ainvoke.assert_called_once()
 
 
 def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_class):
@@ -105,8 +101,6 @@ def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_cla
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        graph_state=ModuleState(input=TextTensor("test input")),
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
@@ -134,8 +128,6 @@ def test_trainer_train_with_failed_cases(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        graph_state=ModuleState(input=TextTensor("test input")),
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
@@ -171,8 +163,6 @@ def test_trainer_early_stopping(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        graph_state=ModuleState(input=TextTensor("test input")),
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=10,
@@ -201,8 +191,6 @@ def test_trainer_train_with_no_losses(
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        graph_state=ModuleState(input=TextTensor("test input")),
-        start_node=mock_module_class,
         train_dataset=mock_dataset,
         optimizer=mock_optimizer,
         epochs=2,
@@ -239,8 +227,6 @@ def test_trainer_test(mock_graph, mock_dataset, mock_optimizer, mock_module_clas
     # Setup
     trainer = Trainer(
         graph=mock_graph,
-        graph_state=ModuleState(input=TextTensor("test input")),
-        start_node=mock_module_class,
         test_dataset=mock_dataset,
         optimizer=mock_optimizer,
     )

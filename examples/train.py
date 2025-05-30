@@ -3,12 +3,14 @@
 from __future__ import annotations
 import os
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypedDict
+from langgraph.graph import END, START, StateGraph
 from pydantic_ai import Agent, models
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
-from pydantic_graph import End, Graph, GraphRunContext
 from agentensor.loss import LLMTensorJudge
-from agentensor.module import AgentModule, ModuleState
+from agentensor.module import AgentModule
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
 from agentensor.train import Trainer
@@ -19,7 +21,7 @@ class ChineseLanguageJudge(LLMTensorJudge):
     """Chinese language judge."""
 
     rubric: str = "The output should be in Chinese."
-    model: models.KnownModelName = "openai:gpt-4o-mini"
+    model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
     include_input = True
 
 
@@ -28,37 +30,25 @@ class FormatJudge(LLMTensorJudge):
     """Format judge."""
 
     rubric: str = "The output should start by introducing itself."
-    model: models.KnownModelName = "openai:gpt-4o-mini"
+    model: models.Model | models.KnownModelName = "openai:gpt-4o-mini"
     include_input = True
 
 
-@dataclass
-class TrainState(ModuleState):
+class TrainState(TypedDict):
     """State of the graph."""
 
-    agent_prompt: TextTensor = TextTensor(text="")
+    output: TextTensor
 
 
-class AgentNode(AgentModule[TrainState, None, TextTensor]):
+class AgentNode(AgentModule):
     """Agent node."""
 
-    async def run(self, ctx: GraphRunContext[TrainState, None]) -> End[TextTensor]:  # type: ignore[override]
-        """Run the agent node."""
-        agent = Agent(
-            model="openai:gpt-4o-mini",
-            system_prompt=ctx.state.agent_prompt.text,
+    def get_agent(self) -> Agent:
+        """Get agent instance."""
+        return Agent(
+            model=self.model or "openai:gpt-4o-mini",
+            system_prompt=self.system_prompt.text,
         )
-        assert ctx.state.input
-        result = await agent.run(ctx.state.input.text)
-        output = result.output
-
-        output_tensor = TextTensor(
-            output,
-            parents=[ctx.state.input, ctx.state.agent_prompt],
-            requires_grad=True,
-        )
-
-        return End(output_tensor)
 
 
 def main() -> None:
@@ -71,33 +61,45 @@ def main() -> None:
             environment="development",
             service_name="evals",
         )
+    model = OpenAIModel(
+        model_name="llama3.2:1b",
+        provider=OpenAIProvider(base_url="http://localhost:11434/v1", api_key="ollama"),
+    )
+    # model="openai:gpt-4o-mini"
 
     dataset = Dataset[TextTensor, TextTensor, Any](
         cases=[
             Case(
-                inputs=TextTensor("Hello, how are you?"),
+                inputs=TextTensor("Hello, how are you?", model=model),
                 metadata={"language": "English"},
             ),
             Case(
-                inputs=TextTensor("こんにちは、元気ですか？"),
+                inputs=TextTensor("こんにちは、元気ですか？", model=model),
                 metadata={"language": "Japanese"},
             ),
         ],
         evaluators=[
-            ChineseLanguageJudge(),
-            FormatJudge(),
+            ChineseLanguageJudge(model=model),
+            FormatJudge(model=model),
         ],
     )
 
-    state = TrainState(
-        agent_prompt=TextTensor("You are a helpful assistant.", requires_grad=True)
+    graph = StateGraph(TrainState)
+    graph.add_node(
+        "agent",
+        AgentNode(
+            system_prompt=TextTensor(
+                "You are a helpful assistant.", requires_grad=True, model=model
+            ),
+            model=model,
+        ),
     )
-    graph = Graph[TrainState, None, TextTensor](nodes=[AgentNode])
-    optimizer = Optimizer(state)  # type: ignore[arg-type]
+    graph.add_edge(START, "agent")
+    graph.add_edge("agent", END)
+    compiled_graph = graph.compile()
+    optimizer = Optimizer(graph, model=model)
     trainer = Trainer(
-        graph,
-        state,
-        AgentNode,  # type: ignore[arg-type]
+        compiled_graph,
         train_dataset=dataset,
         optimizer=optimizer,
         epochs=15,

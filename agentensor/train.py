@@ -1,11 +1,9 @@
 """Trainer."""
 
 from typing import Any, Literal
+from langgraph.graph.graph import CompiledGraph
 from pydantic_evals import Dataset
 from pydantic_evals.reporting import EvaluationReport
-from pydantic_graph import Graph
-from pydantic_graph.nodes import DepsT, StateT
-from agentensor.module import AgentModule, ModuleState
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
 
@@ -15,9 +13,8 @@ class Trainer:
 
     def __init__(
         self,
-        graph: Graph[StateT, DepsT, TextTensor],
-        graph_state: ModuleState,
-        start_node: type[AgentModule],
+        graph: CompiledGraph,
+        graph_recursion_limit: int = 25,
         train_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
         eval_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
         test_dataset: Dataset[TextTensor, TextTensor, Any] | None = None,
@@ -27,8 +24,7 @@ class Trainer:
     ):
         """Initialize the trainer."""
         self.graph = graph
-        self.graph_state = graph_state
-        self.start_node = start_node
+        self.graph_recursion_limit = graph_recursion_limit
         self.optimizer = optimizer
         self.epochs = epochs
         self.stop_threshold = stop_threshold
@@ -38,9 +34,10 @@ class Trainer:
 
     async def forward(self, x: TextTensor) -> TextTensor:
         """Forward the graph."""
-        self.graph_state.input = x
-        result = await self.graph.run(self.start_node(), state=self.graph_state)  # type: ignore[arg-type]
-        return result.output
+        result = await self.graph.ainvoke(
+            {"output": x}, {"recursion_limit": self.graph_recursion_limit}
+        )
+        return result["output"]
 
     def train(self) -> None:
         """Train the graph."""

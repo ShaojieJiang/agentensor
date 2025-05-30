@@ -28,13 +28,15 @@ def mock_module_class():
     """Create a mock module class for testing."""
 
     class MockModule(AgentModule):
-        param1 = TextTensor("initial text 1", requires_grad=True)
-        param2 = TextTensor("initial text 2", requires_grad=True)
-
-        def __init__(self):
-            super().__init__()
+        system_prompt: TextTensor = TextTensor("system", requires_grad=True)
+        param1: TextTensor = TextTensor("initial text 1", requires_grad=True)
+        param2: TextTensor = TextTensor("initial text 2", requires_grad=True)
 
         def run(self, state):
+            pass
+
+        def get_agent(self):
+            """Dummy get_agent method for testing."""
             pass
 
     return MockModule
