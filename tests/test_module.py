@@ -1,13 +1,18 @@
 """Test module for the Module class."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
 
 
-def test_module_get_params():
+@patch("agentensor.module.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
+def test_module_get_params(mock_tensor_init, mock_module_init):
     """Test AgentModule.get_params() method."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_module_init.return_value = MagicMock()
 
     class TestModule(AgentModule):
         system_prompt: TextTensor = TextTensor("param1", requires_grad=True)
@@ -31,8 +36,13 @@ def test_module_get_params():
     assert params[1].text == "param3"
 
 
-def test_module_get_params_empty():
+@patch("agentensor.module.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
+def test_module_get_params_empty(mock_tensor_init, mock_module_init):
     """Test AgentModule.get_params() with no parameters."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_module_init.return_value = MagicMock()
 
     class EmptyModule(AgentModule):
         system_prompt: TextTensor = TextTensor("param", requires_grad=False)
@@ -49,8 +59,13 @@ def test_module_get_params_empty():
     assert len(params) == 0
 
 
-def test_module_get_params_inheritance():
+@patch("agentensor.module.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
+def test_module_get_params_inheritance(mock_tensor_init, mock_module_init):
     """Test AgentModule.get_params() with inheritance."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_module_init.return_value = MagicMock()
 
     class ParentModule(AgentModule):
         system_prompt: TextTensor = TextTensor("parent", requires_grad=True)
@@ -77,8 +92,14 @@ def test_module_get_params_inheritance():
     assert {p.text for p in params} == {"parent", "child"}
 
 
+@patch("agentensor.module.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
 @pytest.mark.asyncio
-async def test_module_call():
+async def test_module_call(mock_tensor_init, mock_module_init):
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_module_init.return_value = MagicMock()
+
     class TestModule(AgentModule):
         system_prompt: TextTensor = TextTensor("system prompt", requires_grad=True)
 

@@ -16,8 +16,11 @@ def mock_graph():
 
 
 @pytest.fixture
-def mock_module_class():
+@patch("agentensor.tensor.init_chat_model")
+def mock_module_class(mock_init_chat_model):
     """Create a mock module class for testing."""
+    # Mock the model initialization
+    mock_init_chat_model.return_value = MagicMock()
 
     class MockModule(AgentModule):
         system_prompt: TextTensor = TextTensor("system", requires_grad=True)
@@ -32,15 +35,25 @@ def mock_module_class():
     return MockModule
 
 
-def test_optimizer_initialization(mock_graph):
+@patch("agentensor.optim.init_chat_model")
+def test_optimizer_initialization(mock_init_chat_model, mock_graph):
     """Test Optimizer initialization."""
+    # Mock the model initialization
+    mock_init_chat_model.return_value = MagicMock()
+
     optimizer = Optimizer(mock_graph)
     assert hasattr(optimizer, "agent")
     assert isinstance(optimizer.params, list)
 
 
-def test_optimizer_zero_grad(mock_graph):
+@patch("agentensor.optim.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
+def test_optimizer_zero_grad(mock_tensor_init, mock_optim_init, mock_graph):
     """Test zero_grad method."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_optim_init.return_value = MagicMock()
+
     optimizer = Optimizer(mock_graph)
     param1 = TextTensor("text1", requires_grad=True)
     param2 = TextTensor("text2", requires_grad=True)
@@ -56,8 +69,14 @@ def test_optimizer_zero_grad(mock_graph):
     assert param2.text_grad == ""
 
 
-def test_optimizer_step(mock_graph):
+@patch("agentensor.optim.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
+def test_optimizer_step(mock_tensor_init, mock_optim_init, mock_graph):
     """Test step method."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_optim_init.return_value = MagicMock()
+
     optimizer = Optimizer(mock_graph)
     param1 = TextTensor("text1", requires_grad=True)
     param2 = TextTensor("text2", requires_grad=True)
@@ -84,8 +103,14 @@ def test_optimizer_step(mock_graph):
         assert param2.text == "optimized text"
 
 
-def test_optimizer_step_no_grad(mock_graph):
+@patch("agentensor.optim.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
+def test_optimizer_step_no_grad(mock_tensor_init, mock_optim_init, mock_graph):
     """Test step method when there are no gradients."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_optim_init.return_value = MagicMock()
+
     optimizer = Optimizer(mock_graph)
     param1 = TextTensor("text1", requires_grad=True)
     param2 = TextTensor("text2", requires_grad=True)
