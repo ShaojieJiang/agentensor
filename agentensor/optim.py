@@ -27,7 +27,7 @@ class Optimizer:
         ]
         if isinstance(model, str):
             self.model = init_chat_model(model)
-        else:
+        else:  # pragma: no cover
             self.model = model
 
     def step(self) -> None:

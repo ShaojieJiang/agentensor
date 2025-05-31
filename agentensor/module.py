@@ -1,6 +1,7 @@
 """Module class."""
 
 from abc import ABC, abstractmethod
+from typing import Any
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage
@@ -18,9 +19,9 @@ class AgentModule(BaseModel, ABC):
     system_prompt: TextTensor
     llm: str | BaseChatModel = "gpt-4o-mini"
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, __context: Any) -> None:
         """Post initialization hook."""
-        if isinstance(self.llm, str):
+        if isinstance(self.llm, str):  # pragma: no cover
             self.llm = init_chat_model(self.llm)
 
     def get_params(self) -> list[TextTensor]:

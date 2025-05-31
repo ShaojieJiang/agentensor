@@ -1,18 +1,9 @@
 """Test module for the Module class."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 import pytest
 from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
-
-
-@pytest.fixture
-def mock_agent():
-    """Create a mock agent for testing."""
-    with patch("agentensor.tensor.Agent") as mock_agent_class:
-        mock_agent = MagicMock()
-        mock_agent_class.return_value = mock_agent
-        yield mock_agent
 
 
 def test_module_get_params():
@@ -25,9 +16,10 @@ def test_module_get_params():
         model: str = "openai:gpt-4o"
         non_param: str = "not a tensor"
 
-        def get_agent(self):
-            """Dummy run method for testing."""
-            pass
+        @property
+        def agent(self):
+            """Mock agent property for testing."""
+            return MagicMock()
 
     module = TestModule()
     params = module.get_params()
@@ -39,16 +31,17 @@ def test_module_get_params():
     assert params[1].text == "param3"
 
 
-def test_module_get_params_empty(mock_agent):
+def test_module_get_params_empty():
     """Test AgentModule.get_params() with no parameters."""
 
     class EmptyModule(AgentModule):
         system_prompt: TextTensor = TextTensor("param", requires_grad=False)
         non_param: str = "not a tensor"
 
-        def get_agent(self):
-            """Dummy run method for testing."""
-            pass
+        @property
+        def agent(self):
+            """Mock agent property for testing."""
+            return MagicMock()
 
     module = EmptyModule()
     params = module.get_params()
@@ -62,16 +55,18 @@ def test_module_get_params_inheritance():
     class ParentModule(AgentModule):
         system_prompt: TextTensor = TextTensor("parent", requires_grad=True)
 
-        def get_agent(self):
-            """Dummy run method for testing."""
-            pass
+        @property
+        def agent(self):
+            """Mock agent property for testing."""
+            return MagicMock()
 
     class ChildModule(ParentModule):
         child_param: TextTensor = TextTensor("child", requires_grad=True)
 
-        def get_agent(self):
-            """Dummy run method for testing."""
-            pass
+        @property
+        def agent(self):
+            """Mock agent property for testing."""
+            return MagicMock()
 
     module = ChildModule()
     params = module.get_params()
@@ -87,12 +82,13 @@ async def test_module_call():
     class TestModule(AgentModule):
         system_prompt: TextTensor = TextTensor("system prompt", requires_grad=True)
 
-        def get_agent(self):
-            """Dummy run method for testing."""
+        @property
+        def agent(self):
+            """Mock agent property for testing."""
             mock_agent = AsyncMock()
-            run_output = MagicMock()
-            run_output.output = "Output text"
-            mock_agent.run.return_value = run_output
+            mock_result = {"messages": [MagicMock()]}
+            mock_result["messages"][-1].content = "Output text"
+            mock_agent.ainvoke.return_value = mock_result
             return mock_agent
 
     module = TestModule()

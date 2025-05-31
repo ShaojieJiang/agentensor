@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 import pytest
+from langgraph.graph import StateGraph
 from agentensor.module import AgentModule
 from agentensor.optim import Optimizer
 from agentensor.tensor import TextTensor
@@ -10,17 +11,8 @@ from agentensor.tensor import TextTensor
 @pytest.fixture
 def mock_graph():
     """Create a mock graph for testing."""
-    mock_graph = MagicMock()
+    mock_graph = StateGraph(dict)
     return mock_graph
-
-
-@pytest.fixture
-def mock_agent():
-    """Create a mock agent for testing."""
-    with patch("agentensor.optim.Agent") as mock_agent_class:
-        mock_agent = MagicMock()
-        mock_agent_class.return_value = mock_agent
-        yield mock_agent
 
 
 @pytest.fixture
@@ -32,76 +24,82 @@ def mock_module_class():
         param1: TextTensor = TextTensor("initial text 1", requires_grad=True)
         param2: TextTensor = TextTensor("initial text 2", requires_grad=True)
 
-        def run(self, state):
-            pass
-
-        def get_agent(self):
-            """Dummy get_agent method for testing."""
-            pass
+        @property
+        def agent(self):
+            """Mock agent property for testing."""
+            return MagicMock()
 
     return MockModule
 
 
-def test_optimizer_initialization(mock_graph, mock_agent):
+def test_optimizer_initialization(mock_graph):
     """Test Optimizer initialization."""
     optimizer = Optimizer(mock_graph)
-    assert optimizer.agent is not None
+    assert hasattr(optimizer, "agent")
     assert isinstance(optimizer.params, list)
 
 
-def test_optimizer_zero_grad(mock_graph, mock_agent):
+def test_optimizer_zero_grad(mock_graph):
     """Test zero_grad method."""
     optimizer = Optimizer(mock_graph)
-    optimizer.params = [
-        TextTensor("text1", requires_grad=True),
-        TextTensor("text2", requires_grad=True),
-    ]
+    param1 = TextTensor("text1", requires_grad=True)
+    param2 = TextTensor("text2", requires_grad=True)
 
     # Set some gradients
-    optimizer.params[0].gradients = ["grad1"]
-    optimizer.params[1].gradients = ["grad2"]
+    param1.gradients = ["grad1"]
+    param2.gradients = ["grad2"]
 
+    optimizer.params = [param1, param2]
     optimizer.zero_grad()
 
-    assert optimizer.params[0].text_grad == ""
-    assert optimizer.params[1].text_grad == ""
+    assert param1.text_grad == ""
+    assert param2.text_grad == ""
 
 
-def test_optimizer_step(mock_graph, mock_agent):
+def test_optimizer_step(mock_graph):
     """Test step method."""
     optimizer = Optimizer(mock_graph)
-    optimizer.params = [
-        TextTensor("text1", requires_grad=True),
-        TextTensor("text2", requires_grad=True),
-    ]
+    param1 = TextTensor("text1", requires_grad=True)
+    param2 = TextTensor("text2", requires_grad=True)
 
     # Set some gradients
-    optimizer.params[0].gradients = ["grad1"]
-    optimizer.params[1].gradients = ["grad2"]
+    param1.gradients = ["grad1"]
+    param2.gradients = ["grad2"]
+
+    optimizer.params = [param1, param2]
 
     # Mock the agent's response
-    mock_agent.run_sync.return_value.data = "optimized text"
+    with patch("agentensor.optim.create_react_agent") as mock_create_agent:
+        mock_agent = MagicMock()
+        mock_result = {"messages": [MagicMock()]}
+        mock_result["messages"][-1].content = "optimized text"
+        mock_agent.invoke.return_value = mock_result
+        mock_create_agent.return_value = mock_agent
 
-    optimizer.step()
+        optimizer.step()
 
-    # Verify the agent was called for each parameter with gradient
-    assert mock_agent.run_sync.call_count == 2
-    assert optimizer.params[0].text == "optimized text"
-    assert optimizer.params[1].text == "optimized text"
+        # Verify the agent was called for each parameter with gradient
+        assert mock_agent.invoke.call_count == 2
+        assert param1.text == "optimized text"
+        assert param2.text == "optimized text"
 
 
-def test_optimizer_step_no_grad(mock_graph, mock_agent):
+def test_optimizer_step_no_grad(mock_graph):
     """Test step method when there are no gradients."""
     optimizer = Optimizer(mock_graph)
-    optimizer.params = [
-        TextTensor("text1", requires_grad=True),
-        TextTensor("text2", requires_grad=True),
-    ]
+    param1 = TextTensor("text1", requires_grad=True)
+    param2 = TextTensor("text2", requires_grad=True)
 
-    # No gradients set
-    optimizer.step()
+    optimizer.params = [param1, param2]
 
-    # Verify the agent was not called
-    assert mock_agent.run_sync.call_count == 0
-    assert optimizer.params[0].text == "text1"
-    assert optimizer.params[1].text == "text2"
+    # Mock the agent
+    with patch("agentensor.optim.create_react_agent") as mock_create_agent:
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        optimizer.step()
+
+        # Verify the agent was not called since no gradients
+        assert mock_agent.invoke.call_count == 0
+        assert param1.text == "text1"
+        assert param2.text == "text2"
