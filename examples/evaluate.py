@@ -5,11 +5,12 @@ import json
 from dataclasses import dataclass
 from typing import TypedDict
 from datasets import load_dataset
+from langchain.chat_models import init_chat_model
+from langchain_core.language_models import BaseChatModel
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.graph import CompiledGraph
+from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel
-from pydantic_ai import Agent, models
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
 from pydantic_evals.evaluators import EvaluationReason, Evaluator, EvaluatorContext
 from agentensor.module import AgentModule
@@ -72,12 +73,15 @@ class HFMultiClassClassificationTask:
         self,
         task_repo: str,
         evaluators: list[Evaluator],
-        model: models.Model | models.KnownModelName | str | None = None,
+        model: BaseChatModel | str = "gpt-4o-mini",
     ) -> None:
         """Initialize the multi-class classification task."""
         self.task_repo = task_repo
         self.evaluators = evaluators
-        self.model = model
+        if isinstance(model, str):
+            self.model = init_chat_model(model)
+        else:
+            self.model = model
         self.dataset = self._prepare_dataset()
 
     def _prepare_dataset(self) -> dict[str, Dataset]:
@@ -103,21 +107,20 @@ class HFMultiClassClassificationTask:
 class AgentNode(AgentModule):
     """Agent node."""
 
-    def get_agent(self) -> Agent:
+    @property
+    def agent(self) -> CompiledGraph:
         """Get agent instance."""
-        return Agent(
-            model=self.model or "openai:gpt-4o-mini",
-            system_prompt=self.system_prompt.text,
-            output_type=ClassificationResults,  # type: ignore[arg-type]
+        return create_react_agent(
+            self.llm,
+            tools=[],
+            prompt=self.system_prompt.text,
+            response_format=ClassificationResults,
         )
 
 
 if __name__ == "__main__":
-    model = OpenAIModel(
-        model_name="llama3.2:1b",
-        provider=OpenAIProvider(base_url="http://localhost:11434/v1", api_key="ollama"),
-    )
-    # model = "openai:gpt-4o-mini"
+    model = init_chat_model("llama3.2:1b", model_provider="ollama")
+    # model = "gpt-4o-mini"
 
     task = HFMultiClassClassificationTask(
         task_repo="knowledgator/events_classification_biotech",
@@ -137,7 +140,7 @@ if __name__ == "__main__":
                 requires_grad=True,
                 model=model,
             ),
-            model=model,
+            llm=model,
         ),
     )
     graph.add_edge(START, "agent")

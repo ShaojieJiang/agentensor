@@ -1,7 +1,11 @@
 """Optimizer module."""
 
+from langchain.chat_models import init_chat_model
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph
-from pydantic_ai import Agent, models
+from langgraph.graph.graph import CompiledGraph
+from langgraph.prebuilt import create_react_agent
 from agentensor.module import AgentModule
 from agentensor.tensor import TextTensor
 
@@ -12,7 +16,7 @@ class Optimizer:
     def __init__(
         self,
         graph: StateGraph,
-        model: models.Model | models.KnownModelName | str | None = None,
+        model: str | BaseChatModel = "gpt-4o-mini",
     ) -> None:
         """Initialize the optimizer."""
         self.params: list[TextTensor] = [
@@ -21,10 +25,10 @@ class Optimizer:
             if isinstance(node.runnable.afunc, AgentModule)  # type: ignore[attr-defined]
             for param in node.runnable.afunc.get_params()  # type: ignore[attr-defined]
         ]
-        self.agent: Agent = Agent(
-            model=model or "openai:gpt-4o-mini",
-            system_prompt="Rewrite the system prompt given the feedback.",
-        )
+        if isinstance(model, str):
+            self.model = init_chat_model(model)
+        else:  # pragma: no cover
+            self.model = model
 
     def step(self) -> None:
         """Step the optimizer."""
@@ -40,4 +44,14 @@ class Optimizer:
 
     def optimize(self, text: str, grad: str) -> str:
         """Optimize the text."""
-        return self.agent.run_sync(f"Feedback: {grad}\nText: {text}").data
+        result = self.agent.invoke(
+            {"messages": [HumanMessage(content=f"Feedback: {grad}\nText: {text}")]}
+        )
+        return result["messages"][-1].content
+
+    @property
+    def agent(self) -> CompiledGraph:
+        """Get the agent."""
+        return create_react_agent(
+            self.model, tools=[], prompt="Rewrite the system prompt given the feedback."
+        )

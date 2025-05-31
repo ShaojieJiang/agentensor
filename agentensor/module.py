@@ -1,8 +1,12 @@
 """Module class."""
 
 from abc import ABC, abstractmethod
+from typing import Any
+from langchain.chat_models import init_chat_model
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
+from langgraph.graph.graph import CompiledGraph
 from pydantic import BaseModel, ConfigDict
-from pydantic_ai import Agent, models
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 from agentensor.tensor import TextTensor
 
@@ -13,7 +17,12 @@ class AgentModule(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     system_prompt: TextTensor
-    model: models.Model | models.KnownModelName | str = "openai:gpt-4o"
+    llm: str | BaseChatModel = "gpt-4o-mini"
+
+    def model_post_init(self, __context: Any) -> None:
+        """Post initialization hook."""
+        if isinstance(self.llm, str):  # pragma: no cover
+            self.llm = init_chat_model(self.llm)
 
     def get_params(self) -> list[TextTensor]:
         """Get the parameters of the module."""
@@ -27,10 +36,13 @@ class AgentModule(BaseModel, ABC):
     async def __call__(self, state: dict) -> dict:
         """Run the agent node."""
         assert state["output"]
-        agent = self.get_agent()
         try:
-            result = await agent.run(state["output"].text)
-            output = str(result.output)
+            result = await self.agent.ainvoke(
+                {"messages": [HumanMessage(content=state["output"].text)]}
+            )
+            output = str(
+                result.get("structured_response", result["messages"][-1].content)
+            )  # prioritize structured response over raw response
         except UnexpectedModelBehavior:  # pragma: no cover
             output = "Error"
 
@@ -38,12 +50,13 @@ class AgentModule(BaseModel, ABC):
             output,
             parents=[state["output"], self.system_prompt],
             requires_grad=True,
-            model=self.model,
+            model=self.llm,
         )
 
         return {"output": output_tensor}
 
+    @property
     @abstractmethod
-    def get_agent(self) -> Agent:
+    def agent(self) -> CompiledGraph:
         """Get agent instance."""
         pass  # pragma: no cover

@@ -33,8 +33,12 @@ def mock_judge_output():
 
 
 @pytest.fixture
-def evaluator_context(mock_openai):
+@patch("agentensor.tensor.init_chat_model")
+def evaluator_context(mock_init_chat_model, mock_openai):
     """Create a test evaluator context."""
+    # Mock the model initialization
+    mock_init_chat_model.return_value = MagicMock()
+
     return EvaluatorContext(
         name="test_evaluator",
         inputs=TextTensor(text="test input"),

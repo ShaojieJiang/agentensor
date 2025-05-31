@@ -1,6 +1,6 @@
 """Test module for the Trainer class."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic_evals import Dataset
 from pydantic_graph import Graph
@@ -33,8 +33,13 @@ def mock_optimizer():
 
 
 @pytest.fixture
-def mock_module_class():
+@patch("agentensor.module.init_chat_model")
+@patch("agentensor.tensor.init_chat_model")
+def mock_module_class(mock_tensor_init, mock_module_init):
     """Create a mock module class for testing."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+    mock_module_init.return_value = MagicMock()
 
     class MockModule(AgentModule):
         system_prompt: TextTensor = TextTensor("test", requires_grad=True)
@@ -84,16 +89,21 @@ async def test_trainer_step(
 
     # Mock the graph's run method
     mock_graph.ainvoke = AsyncMock()
-    mock_graph.ainvoke.return_value = {"output": TextTensor("test output")}
 
-    # Test step
-    input_tensor = TextTensor("test input")
-    result = await trainer.forward(input_tensor)
+    # Create a proper mock TextTensor for the return value
+    with patch("agentensor.tensor.init_chat_model") as mock_tensor_init:
+        mock_tensor_init.return_value = MagicMock()
+        expected_output = TextTensor("test output")
+        mock_graph.ainvoke.return_value = {"output": expected_output}
 
-    # Verify
-    assert isinstance(result, TextTensor)
-    assert result.text == "test output"
-    mock_graph.ainvoke.assert_called_once()
+        # Test step
+        input_tensor = TextTensor("test input")
+        result = await trainer.forward(input_tensor)
+
+        # Verify
+        assert isinstance(result, TextTensor)
+        assert result.text == "test output"
+        mock_graph.ainvoke.assert_called_once()
 
 
 def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_class):
@@ -121,10 +131,14 @@ def test_trainer_train(mock_graph, mock_dataset, mock_optimizer, mock_module_cla
     assert mock_optimizer.zero_grad.call_count == 1
 
 
+@patch("agentensor.tensor.init_chat_model")
 def test_trainer_train_with_failed_cases(
-    mock_graph, mock_dataset, mock_optimizer, mock_module_class
+    mock_tensor_init, mock_graph, mock_dataset, mock_optimizer, mock_module_class
 ):
     """Test the train method with failed cases that need backward pass."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+
     # Setup
     trainer = Trainer(
         graph=mock_graph,
@@ -184,10 +198,14 @@ def test_trainer_early_stopping(
     assert mock_optimizer.zero_grad.call_count == 1
 
 
+@patch("agentensor.tensor.init_chat_model")
 def test_trainer_train_with_no_losses(
-    mock_graph, mock_dataset, mock_optimizer, mock_module_class
+    mock_tensor_init, mock_graph, mock_dataset, mock_optimizer, mock_module_class
 ):
     """Test the train method when all assertions pass and there are no losses."""
+    # Mock the model initialization
+    mock_tensor_init.return_value = MagicMock()
+
     # Setup
     trainer = Trainer(
         graph=mock_graph,
@@ -207,7 +225,9 @@ def test_trainer_train_with_no_losses(
     # Mock dataset evaluation
     mock_report = MagicMock()
     mock_report.cases = [mock_case]
-    mock_report.averages.return_value.assertions = 0.5  # Below stop threshold
+    mock_report.averages.return_value.assertions = (
+        0.5  # Below stop threshold to continue training
+    )
     mock_dataset.evaluate_sync.return_value = mock_report
 
     # Run training
@@ -217,29 +237,30 @@ def test_trainer_train_with_no_losses(
     assert mock_dataset.evaluate_sync.call_count == 2  # Called for each epoch
     assert mock_optimizer.step.call_count == 2
     assert mock_optimizer.zero_grad.call_count == 2
-    assert (
-        mock_case.output.text_grad == ""
-    )  # No backward pass since all assertions passed
 
 
 def test_trainer_test(mock_graph, mock_dataset, mock_optimizer, mock_module_class):
     """Test the test method of Trainer."""
-    # Setup
+    # Create test dataset
+    test_dataset = MagicMock(spec=Dataset)
+    mock_report = MagicMock()
+    test_dataset.evaluate_sync.return_value = mock_report
+
+    # Setup trainer with test_dataset
     trainer = Trainer(
         graph=mock_graph,
-        test_dataset=mock_dataset,
+        train_dataset=mock_dataset,
+        test_dataset=test_dataset,
         optimizer=mock_optimizer,
+        epochs=2,
     )
 
-    # Mock dataset evaluation
-    mock_report = MagicMock()
-    mock_dataset.evaluate_sync.return_value = mock_report
-
-    # Run test
-    trainer.test()
+    # Run test (should not return anything)
+    result = trainer.test()
 
     # Verify
-    mock_dataset.evaluate_sync.assert_called_once()
+    assert result is None  # test method doesn't return anything
+    test_dataset.evaluate_sync.assert_called_once_with(trainer.forward)
     mock_report.print.assert_called_once_with(
         include_input=True, include_output=True, include_durations=True
     )

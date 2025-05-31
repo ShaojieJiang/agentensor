@@ -1,7 +1,11 @@
 """Example module."""
 
 from __future__ import annotations
-from pydantic_ai import Agent, models
+from langchain.chat_models import init_chat_model
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import HumanMessage
+from langgraph.graph.graph import CompiledGraph
+from langgraph.prebuilt import create_react_agent
 
 
 class TextTensor:
@@ -12,17 +16,17 @@ class TextTensor:
         text: str,
         parents: list[TextTensor] | None = None,
         requires_grad: bool = False,
-        model: models.Model | models.KnownModelName | str | None = None,
+        model: str | BaseChatModel = "gpt-4o-mini",
     ) -> None:
         """Initialize a TextTensor."""
         self.text = text
         self.requires_grad = requires_grad
         self.gradients: list[str] = []
-        self.agent = Agent(
-            model=model or "openai:gpt-4o-mini",
-            system_prompt="Answer the user's question.",
-        )
         self.parents: list[TextTensor] = parents or []
+        if isinstance(model, str):
+            self.model = init_chat_model(model)
+        else:
+            self.model = model
 
     def backward(self, grad: str = "") -> None:
         """Backward pass for the TextTensor.
@@ -43,12 +47,21 @@ class TextTensor:
 
     def calc_grad(self, input_text: str, output_text: str, grad: str) -> str:
         """Calculate the gradient for the TextTensor."""
-        return self.agent.run_sync(
-            f"Here is the input: \n\n>{input_text}\n\nI got this "
-            f"output: \n\n>{output_text}\n\nHere is the feedback: \n\n"
-            f">{grad}\n\nHow should I improve the input to get a "
-            f"better output?"
-        ).output
+        result = self.agent.invoke(
+            {
+                "messages": [
+                    HumanMessage(
+                        content=(
+                            f"Here is the input: \n\n>{input_text}\n\nI got this "
+                            f"output: \n\n>{output_text}\n\nHere is the feedback: \n\n"
+                            f">{grad}\n\nHow should I improve the input to get a "
+                            f"better output?"
+                        )
+                    )
+                ]
+            }
+        )
+        return result["messages"][-1].content
 
     @property
     def text_grad(self) -> str:
@@ -62,3 +75,10 @@ class TextTensor:
     def __str__(self) -> str:
         """Return the text as a string."""
         return self.text
+
+    @property
+    def agent(self) -> CompiledGraph:
+        """Get the agent."""
+        return create_react_agent(
+            self.model, tools=[], prompt="Answer the user's question."
+        )

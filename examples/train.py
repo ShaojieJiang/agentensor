@@ -4,8 +4,11 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from typing import Any, TypedDict
+from langchain.chat_models import init_chat_model
 from langgraph.graph import END, START, StateGraph
-from pydantic_ai import Agent, models
+from langgraph.graph.graph import CompiledGraph
+from langgraph.prebuilt import create_react_agent
+from pydantic_ai import models
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case, Dataset
@@ -43,11 +46,13 @@ class TrainState(TypedDict):
 class AgentNode(AgentModule):
     """Agent node."""
 
-    def get_agent(self) -> Agent:
+    @property
+    def agent(self) -> CompiledGraph:
         """Get agent instance."""
-        return Agent(
-            model=self.model or "openai:gpt-4o-mini",
-            system_prompt=self.system_prompt.text,
+        return create_react_agent(
+            self.llm,
+            tools=[],
+            prompt=self.system_prompt.text,
         )
 
 
@@ -61,11 +66,13 @@ def main() -> None:
             environment="development",
             service_name="evals",
         )
-    model = OpenAIModel(
+    eval_model = OpenAIModel(
         model_name="llama3.2:1b",
         provider=OpenAIProvider(base_url="http://localhost:11434/v1", api_key="ollama"),
     )
-    # model="openai:gpt-4o-mini"
+    model = init_chat_model("llama3.2:1b", model_provider="ollama")
+    # eval_model = "gpt-4o-mini"
+    # model = "gpt-4o-mini"
 
     dataset = Dataset[TextTensor, TextTensor, Any](
         cases=[
@@ -79,8 +86,8 @@ def main() -> None:
             ),
         ],
         evaluators=[
-            ChineseLanguageJudge(model=model),
-            FormatJudge(model=model),
+            ChineseLanguageJudge(model=eval_model),
+            FormatJudge(model=eval_model),
         ],
     )
 
@@ -91,7 +98,7 @@ def main() -> None:
             system_prompt=TextTensor(
                 "You are a helpful assistant.", requires_grad=True, model=model
             ),
-            model=model,
+            llm=model,
         ),
     )
     graph.add_edge(START, "agent")

@@ -27,6 +27,9 @@ docs = [
 [project]
 dependencies = [
   "datasets>=3.5.0",
+  "langchain>=0.3.25",
+  "langchain-ollama>=0.3.3",
+  "langchain-openai>=0.3.18",
   "langgraph>=0.4.5",
   "logfire>=3.14.0",
   "pydantic-ai>=0.2.4"
